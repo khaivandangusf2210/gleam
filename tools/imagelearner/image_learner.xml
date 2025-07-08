@@ -1,5 +1,5 @@
-<tool id="image_learner" name="Image Learner for Classification" version="0.1.0" profile="22.05">
-    <description>trains and evaluates a image classification model</description>
+<tool id="image_learner" name="Image Learner" version="0.1.1" profile="22.05">
+    <description>trains and evaluates an image classification/regression model</description>
     <requirements>
         <container type="docker">quay.io/goeckslab/galaxy-ludwig-gpu:0.10.1</container>
     </requirements>
@@ -320,7 +320,7 @@
     <help>
         <![CDATA[
 **What it does**
-Image Learner for Classification: trains and evaluates a image classification model. 
+Image Learner for Classification/regression: trains and evaluates a image classification/regression model. 
 It uses the metadata csv to find the image paths and labels. 
 The metadata csv should contain a column with the name 'image_path' and a column with the name 'label'.
 Optionally, you can also add a column with the name 'split' to specify which split each row belongs to (train, val, test). 

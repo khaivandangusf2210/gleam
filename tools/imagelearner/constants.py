@@ -79,7 +79,6 @@ MODEL_ENCODER_TEMPLATES: Dict[str, Any] = {
     "vit_l_16": {"type": "vit", "model_variant": "l_16"},
     "vit_l_32": {"type": "vit", "model_variant": "l_32"},
     "vit_h_14": {"type": "vit", "model_variant": "h_14"},
-    "vit_huge_timm": {"type": "vit", "model_variant": "huge_timm", "custom_encoder": True},
     "caformer_s18": {
         "type": "stacked_cnn",
         "custom_model": "caformer_s18",

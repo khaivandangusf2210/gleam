@@ -1,0 +1,364 @@
+
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Galaxy-Ludwig Report</title>
+        <style>
+          body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+              background-color: #f4f4f4;
+          }
+          .container {
+              max-width: 800px;
+              margin: auto;
+              background: white;
+              padding: 20px;
+              box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+              overflow-x: auto;
+          }
+          h1 {
+              text-align: center;
+              color: #333;
+          }
+          h2 {
+              border-bottom: 2px solid #4CAF50;
+              color: #4CAF50;
+              padding-bottom: 5px;
+          }
+          table {
+              border-collapse: collapse;
+              margin: 20px 0;
+              width: 100%;
+              table-layout: fixed; /* Enforces consistent column widths */
+          }
+          table, th, td {
+              border: 1px solid #ddd;
+          }
+          th, td {
+              padding: 8px;
+              text-align: center; /* Center-align text */
+              vertical-align: middle; /* Center-align content vertically */
+              word-wrap: break-word; /* Break long words to avoid overflow */
+          }
+          th:first-child, td:first-child {
+              width: 5%; /* Smaller width for the first column */
+          }
+          th:nth-child(2), td:nth-child(2) {
+              width: 50%; /* Wider for the metric/description column */
+          }
+          th:last-child, td:last-child {
+              width: 25%; /* Value column gets remaining space */
+          }
+          th {
+              background-color: #4CAF50;
+              color: white;
+          }
+          .plot {
+              text-align: center;
+              margin: 20px 0;
+          }
+          .plot img {
+              max-width: 100%;
+              height: auto;
+          }
+        </style>
+    </head>
+    <body>
+    <div class="container">
+    <h1>Image Classification Results</h1>
+<style>
+  .tabs {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #ccc;
+    margin-bottom: 1rem;
+  }
+  .tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    background: #f9f9f9;
+    margin-right: 5px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+  .tab.active {
+    background: white;
+    font-weight: bold;
+  }
+  /* new help-button styling */
+  .help-btn {
+    margin-left: auto;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    border: 1px solid #4CAF50;
+    border-radius: 4px;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+  }
+  .tab-content {
+    display: none;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-top: none;
+  }
+  .tab-content.active {
+    display: block;
+  }
+</style>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('metrics')">Config &amp; Results Summary</div>
+  <div class="tab" onclick="showTab('trainval')">Train/Validation Results</div>
+  <div class="tab" onclick="showTab('test')">Test Results</div>
+  <!-- always-visible help button -->
+  <button id="openMetricsHelp" class="help-btn">Help</button>
+</div>
+
+<div id="metrics" class="tab-content active">
+  <h2 style='text-align: center;'>Training Setup</h2><div style='display: flex; justify-content: center;'><table style='border-collapse: collapse; width: 60%; table-layout: auto;'><thead><tr><th style='padding: 10px; border: 1px solid #ccc; text-align: left;'>Parameter</th><th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Value</th></tr></thead><tbody><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Task Type</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>N/A</td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Model Name</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>caformer_s18</td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Epochs</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>1</td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Batch Size</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>Auto-selected batch size by Ludwig:<br><span style='font-size: 0.85em;'>1</span><br></td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Fine Tune</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>True</td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Use Pretrained</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>True</td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Learning Rate</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>Auto-selected learning rate by Ludwig:<br><span style='font-size: 0.85em;'>0.001</span><br><span style='font-size: 0.85em;'>Based on model architecture and training setup (e.g., fine-tuning).<br>See <a href='https://ludwig.ai/latest/configuration/trainer/#trainer-parameters' target='_blank'>Ludwig Trainer Parameters</a> for details.</span></td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Random Seed</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>42</td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Early Stop</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>5</td></tr><tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Data Split</td><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>Detected a split column (with values 0 and 2) in the input CSV. Used this column as a base and reassigned 15.0% of the training set (originally labeled 0) to validation (labeled 1).</td></tr></tbody></table></div><br><p style='text-align: center; font-size: 0.9em;'>Model trained using Ludwig.<br>If want to learn more about Ludwig default settings,please check their <a href='https://ludwig.ai' target='_blank'>website(ludwig.ai)</a>.</p><hr><h2 style='text-align: center;'>Model Performance Summary</h2><div style='display: flex; justify-content: center;'><table style='border-collapse: collapse; table-layout: auto;'><thead><tr><th style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th><th style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Train</th><th style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Validation</th><th style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Test</th></tr></thead><tbody><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Accuracy</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.1806</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.1000</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.3000</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Accuracy-Micro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.1905</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.1667</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2917</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Hits at K</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.4373</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.6250</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.6333</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Loss</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>2.2962</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>2.1174</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>2.1519</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>ROC-AUC</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.5502</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.7487</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.8685</td></tr></tbody></table></div><br>
+</div>
+<div id="trainval" class="tab-content">
+  <h2 style='text-align: center;'>Train/Validation Performance Summary</h2><div style='display: flex; justify-content: center;'><table style='border-collapse: collapse; table-layout: auto;'><thead><tr><th style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th><th style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Train</th><th style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Validation</th></tr></thead><tbody><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Accuracy</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.1806</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.1000</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Accuracy-Micro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.1905</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.1667</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Hits at K</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.4373</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.6250</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Loss</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>2.2962</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>2.1174</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>ROC-AUC</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.5502</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.7487</td></tr></tbody></table></div><br><h2>Training & Validation Visualizations</h2><p><em>No plots found.</em></p>
+</div>
+<div id="test" class="tab-content">
+  <h2 style='text-align: center;'>Test Performance Summary</h2><div style='display: flex; justify-content: center;'><table style='border-collapse: collapse; table-layout: auto;'><thead><tr><th style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th><th style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Test</th></tr></thead><tbody><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Accuracy</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.3000</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Accuracy-Micro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2917</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>F1-score-Macro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2319</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>F1-score-Micro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2917</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>F1-score-Weighted</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2732</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Precision-Macro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.3293</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Precision-Micro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2917</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Precision-Weighted</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2917</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Recall-Macro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.3000</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Recall-Micro</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2917</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Recall-Weighted</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2917</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Hits at K</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.6333</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Cohen's Kappa</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2169</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Loss</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>2.1519</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>ROC-AUC</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.8685</td></tr><tr><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Token Accuracy</td><td style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>0.2917</td></tr></tbody></table></div><br><h2 style='text-align: center;'>Predictions vs. Ground Truth</h2><div style='overflow-x:auto; margin-bottom:20px;'><table border="1" class="dataframe predictions-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>label</th>
+      <th>prediction</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0.0</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>0.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>1.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>1.0</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>2.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>2.0</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>3.0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>3.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>4.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>4.0</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>5.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>5.0</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>6.0</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>6.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>7.0</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>7.0</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>8.0</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>8.0</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>9.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>9.0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>NaN</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>NaN</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>NaN</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>NaN</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table></div><h2>Test Visualizations</h2><p><em>No plots found.</em></p>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelector(`.tab[onclick*="${id}"]`).classList.add('active');
+}
+</script>
+
+<style>
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+}
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 800px;
+}
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+.metrics-guide h3 {
+  margin-top: 20px;
+}
+.metrics-guide p {
+  margin: 5px 0;
+}
+.metrics-guide ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+</style>
+
+<div id="metricsHelpModal" class="modal">
+  <div class="modal-content">
+    <span class="close">×</span>
+    <h2>Model Evaluation Metrics — Help Guide</h2>
+    <div class="metrics-guide">
+      <h3>1) General Metrics</h3>
+      <p><strong>Loss:</strong> Measures the difference between predicted and actual values. Lower is better. Often used for optimization during training.</p>
+      <p><strong>Accuracy:</strong> Proportion of correct predictions among all predictions. Simple but can be misleading for imbalanced datasets.</p>
+      <p><strong>Micro Accuracy:</strong> Calculates accuracy by summing up all individual true positives and true negatives across all classes, making it suitable for multiclass or multilabel problems.</p>
+      <p><strong>Token Accuracy:</strong> Measures how often the predicted tokens (e.g., in sequences) match the true tokens. Useful in sequence prediction tasks like NLP.</p>
+      <h3>2) Precision, Recall & Specificity</h3>
+      <p><strong>Precision:</strong> Out of all positive predictions, how many were correct. Precision = TP / (TP + FP). Helps when false positives are costly.</p>
+      <p><strong>Recall (Sensitivity):</strong> Out of all actual positives, how many were predicted correctly. Recall = TP / (TP + FN). Important when missing positives is risky.</p>
+      <p><strong>Specificity:</strong> True negative rate. Measures how well the model identifies negatives. Specificity = TN / (TN + FP). Useful in medical testing to avoid false alarms.</p>
+      <h3>3) Macro, Micro, and Weighted Averages</h3>
+      <p><strong>Macro Precision / Recall / F1:</strong> Averages the metric across all classes, treating each class equally, regardless of class frequency. Best when class sizes are balanced.</p>
+      <p><strong>Micro Precision / Recall / F1:</strong> Aggregates TP, FP, FN across all classes before computing the metric. Gives a global view and is ideal for class-imbalanced problems.</p>
+      <p><strong>Weighted Precision / Recall / F1:</strong> Averages each metric across classes, weighted by the number of true instances per class. Balances importance of classes based on frequency.</p>
+      <h3>4) Average Precision (PR-AUC Variants)</h3>
+      <p><strong>Average Precision Macro:</strong> Precision-Recall AUC averaged across all classes equally. Useful for balanced multi-class problems.</p>
+      <p><strong>Average Precision Micro:</strong> Global Precision-Recall AUC using all instances. Best for imbalanced data or multi-label classification.</p>
+      <p><strong>Average Precision Samples:</strong> Precision-Recall AUC averaged across individual samples (not classes). Ideal for multi-label problems where each sample can belong to multiple classes.</p>
+      <h3>5) ROC-AUC Variants</h3>
+      <p><strong>ROC-AUC:</strong> Measures model's ability to distinguish between classes. AUC = 1 is perfect; 0.5 is random guessing. Use for binary classification.</p>
+      <p><strong>Macro ROC-AUC:</strong> Averages the AUC across all classes equally. Suitable when classes are balanced and of equal importance.</p>
+      <p><strong>Micro ROC-AUC:</strong> Computes AUC from aggregated predictions across all classes. Useful in multiclass or multilabel settings with imbalance.</p>
+      <h3>6) Ranking Metrics</h3>
+      <p><strong>Hits at K:</strong> Measures whether the true label is among the top-K predictions. Common in recommendation systems and retrieval tasks.</p>
+      <h3>7) Confusion Matrix Stats (Per Class)</h3>
+      <p><strong>True Positives / Negatives (TP / TN):</strong> Correct predictions for positives and negatives respectively.</p>
+      <p><strong>False Positives / Negatives (FP / FN):</strong> Incorrect predictions — false alarms and missed detections.</p>
+      <h3>8) Other Useful Metrics</h3>
+      <p><strong>Cohen's Kappa:</strong> Measures agreement between predicted and actual values adjusted for chance. Useful for multiclass classification with imbalanced labels.</p>
+      <p><strong>Matthews Correlation Coefficient (MCC):</strong> Balanced measure of prediction quality that takes into account TP, TN, FP, and FN. Particularly effective for imbalanced datasets.</p>
+      <h3>9) Metric Recommendations</h3>
+      <ul>
+        <li>Use <strong>Accuracy + F1</strong> for balanced data.</li>
+        <li>Use <strong>Precision, Recall, ROC-AUC</strong> for imbalanced datasets.</li>
+        <li>Use <strong>Average Precision Micro</strong> for multilabel or class-imbalanced problems.</li>
+        <li>Use <strong>Macro scores</strong> when all classes should be treated equally.</li>
+        <li>Use <strong>Weighted scores</strong> when class imbalance should be accounted for without ignoring small classes.</li>
+        <li>Use <strong>Confusion Matrix stats</strong> to analyze class-wise performance.</li>
+        <li>Use <strong>Hits at K</strong> for recommendation or ranking-based tasks.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  var modal = document.getElementById("metricsHelpModal");
+  var openBtn = document.getElementById("openMetricsHelp");
+  var span = document.getElementsByClassName("close")[0];
+  if (openBtn && modal) {
+    openBtn.onclick = function() {
+      modal.style.display = "block";
+    };
+  }
+  if (span && modal) {
+    span.onclick = function() {
+      modal.style.display = "none";
+    };
+  }
+  window.onclick = function(event) {
+    if (event.target == modal) {
+      modal.style.display = "none";
+    }
+  }
+});
+</script>
+
+    </div>
+    </body>
+    </html>
+    

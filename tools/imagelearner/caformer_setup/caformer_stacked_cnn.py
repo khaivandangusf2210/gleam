@@ -39,8 +39,8 @@ class CAFormerStackedCNN(nn.Module):
                  fc_norm: Optional[str] = None,
                  fc_use_bias: bool = True,
                  **kwargs):
-        print(f" CAFormerStackedCNN encoder instantiated! ")
-        print(f" Using CAFormer model: {custom_model} ")
+        logger.info("CAFormerStackedCNN encoder instantiated!")
+        logger.info(f"Using CAFormer model: {custom_model}")
         super().__init__()
         
         self.height = height

@@ -346,7 +346,7 @@
         <test expect_num_outputs="3">
             <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
             <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
-            <param name="model_name" value="caformer_b36_timm" />
+            <param name="model_name" value="caformer_b36" />
             <output name="output_report">
                 <assert_contents>
                     <has_text text="Results Summary" />

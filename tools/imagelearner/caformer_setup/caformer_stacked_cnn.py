@@ -39,8 +39,8 @@ class CAFormerStackedCNN(nn.Module):
                  fc_norm: Optional[str] = None,
                  fc_use_bias: bool = True,
                  **kwargs):
-        logger.info("CAFormerStackedCNN encoder instantiated!")
-        logger.info(f"Using CAFormer model: {custom_model}")
+        print(f" CAFormerStackedCNN encoder instantiated! ")
+        print(f" Using CAFormer model: {custom_model} ")
         super().__init__()
         
         self.height = height
@@ -212,37 +212,24 @@ def create_caformer_stacked_cnn(model_name: str, **kwargs) -> CAFormerStackedCNN
     return encoder
 
 def patch_ludwig_stacked_cnn():
-    print(f" PATCH_LUDWIG_STACKED_CNN (backward compatibility) called ")
+    # No unconditional print here
     return patch_ludwig_direct()
 
 def patch_ludwig_robust():
-    print(f" PATCH_LUDWIG_ROBUST function called ")
-    
+    # No unconditional print here
     try:
         from ludwig.encoders.registry import get_encoder_cls
         original_get_encoder_cls = get_encoder_cls
-        
         def patched_get_encoder_cls(encoder_type):
-            print(f" PATCHED GET_ENCODER_CLS called with: {encoder_type} ")
             if encoder_type == "stacked_cnn":
-                print(f" Returning CAFormerStackedCNN for stacked_cnn ")
                 return CAFormerStackedCNN
             return original_get_encoder_cls(encoder_type)
-        
         import ludwig.encoders.registry
         ludwig.encoders.registry.get_encoder_cls = patched_get_encoder_cls
-        print(f" Successfully patched Ludwig encoder registry ")
-        
         from ludwig.encoders.image.base import Stacked2DCNN
         original_stacked_cnn_init = Stacked2DCNN.__init__
-        
         def patched_stacked_cnn_init(self, *args, **kwargs):
-            print(f">>> PATCHED STACKED_CNN INIT called <<<")
-            print(f"  args: {args}")
-            print(f"  kwargs: {kwargs}")
-            
             custom_model = None
-            
             if 'custom_model' in kwargs:
                 custom_model = kwargs['custom_model']
             elif 'encoder_config' in kwargs:
@@ -251,112 +238,65 @@ def patch_ludwig_robust():
                     enc_cfg = enc_cfg.to_dict()
                 if isinstance(enc_cfg, dict) and 'custom_model' in enc_cfg:
                     custom_model = enc_cfg['custom_model']
-            
-            print(f"  [DEBUG] Found custom_model: {custom_model}")
-            
             if custom_model and str(custom_model).startswith('caformer_'):
-                print(f" DETECTED CAFormer model: {custom_model} ")
-                print(f" CREATING CAFormer encoder instead of default Stacked2DCNN ")
-                
+                print(f"DETECTED CAFormer model: {custom_model}")
+                print(f"CAFormer encoder is being loaded and used.")
                 caformer_encoder = create_caformer_stacked_cnn(custom_model, **kwargs)
-                
                 for attr_name in dir(caformer_encoder):
                     if not attr_name.startswith('_'):
                         setattr(self, attr_name, getattr(caformer_encoder, attr_name))
-                
                 self.forward = caformer_encoder.forward
                 self.output_shape = caformer_encoder.output_shape
-                
-                print(f" SUCCESSFULLY REPLACED with CAFormer: {custom_model} ")
-                print(f" Encoder type: {type(self)} ")
                 return
             else:
-                print(f" No CAFormer detected, using original Stacked2DCNN ")
+                # No CAFormer messages for non-CAFormer models
                 original_stacked_cnn_init(self, *args, **kwargs)
-        
         Stacked2DCNN.__init__ = patched_stacked_cnn_init
-        print(f" Successfully patched Stacked2DCNN.__init__ ")
-        
         try:
             from ludwig.features.image_feature import ImageInputFeature
             original_image_feature_init = ImageInputFeature.__init__
-            
             def patched_image_feature_init(self, *args, **kwargs):
-                print(f" PATCHED IMAGE_FEATURE INIT called ")
-                print(f"  kwargs: {kwargs}")
-                
-                if 'encoder' in kwargs and 'custom_model' in kwargs['encoder']:
-                    custom_model = kwargs['encoder']['custom_model']
-                    print(f" DETECTED custom_model in feature config: {custom_model} ")
-                
                 original_image_feature_init(self, *args, **kwargs)
-            
             ImageInputFeature.__init__ = patched_image_feature_init
-            print(f" Successfully patched ImageInputFeature.__init__ ")
-            
         except Exception as e:
-            print(f" Could not patch ImageInputFeature: {e} ")
-        
-        print(f" ROBUST PATCH APPLIED SUCCESSFULLY ")
+            pass
         return True
-        
     except Exception as e:
         logger.error(f"Failed to apply robust patch: {e}")
         return False
 
 def patch_ludwig_direct():
-    print(f" PATCH_LUDWIG_DIRECT function called ")
-    
+    # No unconditional print here
     try:
         from ludwig.encoders.registry import get_encoder_cls
         original_get_encoder_cls = get_encoder_cls
-        
         def patched_get_encoder_cls(encoder_type):
-            print(f" PATCHED GET_ENCODER_CLS called with: {encoder_type} ")
             if encoder_type == "stacked_cnn":
-                print(f" ALWAYS returning CAFormerStackedCNN for stacked_cnn ")
                 return CAFormerStackedCNN
             return original_get_encoder_cls(encoder_type)
-        
         import ludwig.encoders.registry
         ludwig.encoders.registry.get_encoder_cls = patched_get_encoder_cls
-        print(f" Successfully patched Ludwig encoder registry ")
-        
         from ludwig.encoders.image.base import Stacked2DCNN
         original_stacked_cnn_init = Stacked2DCNN.__init__
-        
         def patched_stacked_cnn_init(self, *args, **kwargs):
-            print(f"  PATCHED STACKED_CNN INIT called ")
-            print(f"  Forcing CAFormer usage for all stacked_cnn encoders ")
-            
             custom_model = kwargs.get('custom_model', 'caformer_s18')
-            if not custom_model.startswith('caformer_'):
-                custom_model = 'caformer_s18'
-            
-            print(f"  CREATING CAFormer encoder: {custom_model} ")
-            
-            original_stacked_cnn_init(self, *args, **kwargs)
-            
-            caformer_encoder = create_caformer_stacked_cnn(custom_model, **kwargs)
-            
-            self.forward = caformer_encoder.forward
-            
-            if hasattr(caformer_encoder, 'backbone'):
-                self.backbone = caformer_encoder.backbone
-            if hasattr(caformer_encoder, 'fc_layers'):
-                self.fc_layers = caformer_encoder.fc_layers
-            if hasattr(caformer_encoder, 'custom_model'):
-                self.custom_model = caformer_encoder.custom_model
-            
-            print(f" SUCCESSFULLY REPLACED with CAFormer: {custom_model} ")
-            print(f" Encoder type: {type(self)} ")
-        
+            if custom_model.startswith('caformer_'):
+                print(f"DETECTED CAFormer model: {custom_model}")
+                print(f"CAFormer encoder is being loaded and used.")
+                caformer_encoder = create_caformer_stacked_cnn(custom_model, **kwargs)
+                self.forward = caformer_encoder.forward
+                if hasattr(caformer_encoder, 'backbone'):
+                    self.backbone = caformer_encoder.backbone
+                if hasattr(caformer_encoder, 'fc_layers'):
+                    self.fc_layers = caformer_encoder.fc_layers
+                if hasattr(caformer_encoder, 'custom_model'):
+                    self.custom_model = caformer_encoder.custom_model
+                return
+            else:
+                # No CAFormer messages for non-CAFormer models
+                original_stacked_cnn_init(self, *args, **kwargs)
         Stacked2DCNN.__init__ = patched_stacked_cnn_init
-        print(f" Successfully patched Stacked2DCNN.__init__ to force CAFormer ")
-        
-        print(f" DIRECT PATCH APPLIED SUCCESSFULLY ")
         return True
-        
     except Exception as e:
         logger.error(f"Failed to apply direct patch: {e}")
         return False

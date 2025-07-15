@@ -199,15 +199,15 @@ class LayerNormWithoutBias(nn.Module):
         self.eps = eps
 
     def forward(self, x):
-        # print(f"LayerNormWithoutBias input shape: {x.shape}")
+        
         if x.dim() == 4:
             x = x.permute(0, 2, 3, 1)  # [B, H, W, C]
             x = F.layer_norm(x, self.weight.shape, self.weight, None, self.eps)
             x = x.permute(0, 3, 1, 2)  # [B, C, H, W]
-            # print(f"LayerNormWithoutBias output shape (4D): {x.shape}")
+            
         else:
             x = F.layer_norm(x, self.weight.shape, self.weight, None, self.eps)
-            # print(f"LayerNormWithoutBias output shape (other): {x.shape}")
+            
         return x
 
 class SepConv(nn.Module):

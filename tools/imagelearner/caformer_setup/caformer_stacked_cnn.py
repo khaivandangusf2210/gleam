@@ -239,8 +239,8 @@ def patch_ludwig_robust():
                 if isinstance(enc_cfg, dict) and 'custom_model' in enc_cfg:
                     custom_model = enc_cfg['custom_model']
             if custom_model and str(custom_model).startswith('caformer_'):
-                print(f"DETECTED CAFormer model: {custom_model}")
-                print(f"CAFormer encoder is being loaded and used.")
+                logger.info(f"DETECTED CAFormer model: {custom_model}")
+                logger.info("CAFormer encoder is being loaded and used.")
                 caformer_encoder = create_caformer_stacked_cnn(custom_model, **kwargs)
                 for attr_name in dir(caformer_encoder):
                     if not attr_name.startswith('_'):

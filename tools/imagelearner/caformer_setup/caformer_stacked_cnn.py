@@ -279,8 +279,8 @@ def patch_ludwig_direct():
         from ludwig.encoders.image.base import Stacked2DCNN
         original_stacked_cnn_init = Stacked2DCNN.__init__
         def patched_stacked_cnn_init(self, *args, **kwargs):
-            custom_model = kwargs.get('custom_model', 'caformer_s18')
-            if custom_model.startswith('caformer_'):
+            custom_model = kwargs.get('custom_model', None)
+            if custom_model and custom_model.startswith('caformer_'):
                 print(f"DETECTED CAFormer model: {custom_model}")
                 print(f"CAFormer encoder is being loaded and used.")
                 # call parent __init__ first to properly initialize the module

@@ -105,7 +105,7 @@ class CAFormerStackedCNN(nn.Module):
             num_classes=1000
         )
         
-        print(f" CAFormer backbone loaded successfully: {self.custom_model} ")
+        logger.info(f"CAFormer backbone loaded successfully: {self.custom_model}")
         logger.info(f"Loaded CAFormer backbone: {self.custom_model} (pretrained={self.use_pretrained})")
         return model
 

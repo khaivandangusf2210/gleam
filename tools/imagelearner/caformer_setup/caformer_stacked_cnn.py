@@ -283,6 +283,9 @@ def patch_ludwig_direct():
             if custom_model.startswith('caformer_'):
                 print(f"DETECTED CAFormer model: {custom_model}")
                 print(f"CAFormer encoder is being loaded and used.")
+                # call parent __init__ first to properly initialize the module
+                original_stacked_cnn_init(self, *args, **kwargs)
+                # create and assign caformer attributes
                 caformer_encoder = create_caformer_stacked_cnn(custom_model, **kwargs)
                 self.forward = caformer_encoder.forward
                 if hasattr(caformer_encoder, 'backbone'):
@@ -291,7 +294,6 @@ def patch_ludwig_direct():
                     self.fc_layers = caformer_encoder.fc_layers
                 if hasattr(caformer_encoder, 'custom_model'):
                     self.custom_model = caformer_encoder.custom_model
-                return
             else:
                 # No CAFormer messages for non-CAFormer models
                 original_stacked_cnn_init(self, *args, **kwargs)

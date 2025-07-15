@@ -304,43 +304,43 @@ def patch_ludwig_direct():
         return False
 
 def patch_ludwig_schema_validation():
-    print(f" PATCH_LUDWIG_SCHEMA_VALIDATION function called ")
+    logger.info("PATCH_LUDWIG_SCHEMA_VALIDATION function called")
     try:
         from ludwig.schema.features.image import ImageInputFeatureConfig
         original_validate = ImageInputFeatureConfig.validate
         
         def patched_validate(self, data, **kwargs):
-            print(f" PATCHED SCHEMA VALIDATION called ")
-            print(f"  data: {data}")
+            logger.info("PATCHED SCHEMA VALIDATION called")
+            logger.debug(f"data: {data}")
             
             if 'encoder' in data and 'custom_model' in data['encoder']:
                 custom_model = data['encoder']['custom_model']
-                print(f" DETECTED custom_model in schema validation: {custom_model} ")
+                logger.info(f"DETECTED custom_model in schema validation: {custom_model}")
             
             return original_validate(self, data, **kwargs)
         
         ImageInputFeatureConfig.validate = patched_validate
-        print(f" Successfully patched schema validation ")
+        logger.info("Successfully patched schema validation")
         return True
         
     except Exception as e:
-        print(f" Could not patch schema validation: {e} ")
+        logger.error(f"Could not patch schema validation: {e}")
         return False
 
 def patch_ludwig_comprehensive():
-    print(f" PATCH_LUDWIG_COMPREHENSIVE function called ")
+    logger.info("PATCH_LUDWIG_COMPREHENSIVE function called")
     
     patch1 = patch_ludwig_robust()
     patch2 = patch_ludwig_direct()
     patch3 = patch_ludwig_schema_validation()
     
-    print(f" Patch results: robust={patch1}, direct={patch2}, schema={patch3} ")
+    logger.info(f"Patch results: robust={patch1}, direct={patch2}, schema={patch3}")
     
     return patch1 or patch2 or patch3
 
 def test_caformer_stacked_cnn():
     if not CAFORMER_AVAILABLE:
-        print("CAFormer models not available, skipping test")
+        logger.info("CAFormer models not available, skipping test")
         return
     
     try:

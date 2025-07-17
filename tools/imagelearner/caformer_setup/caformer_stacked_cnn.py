@@ -86,7 +86,7 @@ class CAFormerStackedCNN(nn.Module):
         logger.info(f"CAFormerStackedCNN initialized successfully")
 
     def _load_caformer_backbone(self):
-        print(f" Loading CAFormer backbone: {self.custom_model} ")
+        logger.info(f"Loading CAFormer backbone: {self.custom_model}")
         if not CAFORMER_AVAILABLE:
             raise ImportError("CAFormer models are not available")
         

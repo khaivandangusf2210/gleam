@@ -2,15 +2,11 @@ import logging
 import torch
 import torch.nn as nn
 from typing import Dict, Any, Optional
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(__file__))
 
 logger = logging.getLogger(__name__)
 
 try:
-    from caformer_models import caformer_s18, caformer_b36, caformer_s36, caformer_m36
+    from .caformer_models import caformer_s18, caformer_b36, caformer_s36, caformer_m36
     CAFORMER_AVAILABLE = True
     logger.info("CAFormer models imported successfully")
 except ImportError as e:

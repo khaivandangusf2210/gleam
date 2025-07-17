@@ -2,7 +2,6 @@
     <description>trains and evaluates an image classification/regression model</description>
     <requirements>
         <container type="docker">quay.io/goeckslab/galaxy-ludwig-gpu:0.10.1</container>
-        <requirement type="package" version="1.0.0">coreutils</requirement>
     </requirements>
     <required_files>
         <include path="utils.py" />

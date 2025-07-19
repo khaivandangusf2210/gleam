@@ -1,24 +1,26 @@
+import math
 from functools import partial
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
 
 def trunc_normal_(tensor, mean=0., std=1., a=-2., b=2.):
     def norm_cdf(x):
         return (1. + math.erf(x / math.sqrt(2.))) / 2.
 
     with torch.no_grad():
-        l = norm_cdf((a - mean) / std)
-        u = norm_cdf((b - mean) / std)
+        lower = norm_cdf((a - mean) / std)
+        upper = norm_cdf((b - mean) / std)
 
-        tensor.uniform_(2 * l - 1, 2 * u - 1)
+        tensor.uniform_(2 * lower - 1, 2 * upper - 1)
         tensor.erfinv_()
 
         tensor.mul_(std * math.sqrt(2.))
         tensor.add_(mean)
         tensor.clamp_(min=a, max=b)
         return tensor
+
 
 class DropPath(nn.Module):
     def __init__(self, drop_prob=None):
@@ -85,13 +87,13 @@ default_cfgs = {
 }
 
 class Downsampling(nn.Module):
-    def __init__(self, in_channels, out_channels, 
-        kernel_size, stride=1, padding=0, 
-        pre_norm=None, post_norm=None, pre_permute=False):
+    def __init__(self, in_channels, out_channels,
+                 kernel_size, stride=1, padding=0,
+                 pre_norm=None, post_norm=None, pre_permute=False):
         super().__init__()
         self.pre_norm = pre_norm(in_channels) if pre_norm else nn.Identity()
         self.pre_permute = pre_permute
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, 
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
                               stride=stride, padding=padding)
         self.post_norm = post_norm(out_channels) if post_norm else nn.Identity()
 
@@ -126,21 +128,21 @@ class SquaredReLU(nn.Module):
 
 class StarReLU(nn.Module):
     def __init__(self, scale_value=1.0, bias_value=0.0,
-        scale_learnable=True, bias_learnable=True, 
-        mode=None, inplace=False):
+                 scale_learnable=True, bias_learnable=True,
+                 mode=None, inplace=False):
         super().__init__()
         self.inplace = inplace
         self.relu = nn.ReLU(inplace=inplace)
         self.scale = nn.Parameter(scale_value * torch.ones(1),
-            requires_grad=scale_learnable)
+                                 requires_grad=scale_learnable)
         self.bias = nn.Parameter(bias_value * torch.ones(1),
-            requires_grad=bias_learnable)
+                                requires_grad=bias_learnable)
     def forward(self, x):
         return self.scale * self.relu(x)**2 + self.bias
 
 class Attention(nn.Module):
     def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None,
-        attn_drop=0., proj_drop=0., proj_bias=False, **kwargs):
+                 attn_drop=0., proj_drop=0., proj_bias=False, **kwargs):
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
@@ -166,8 +168,8 @@ class Attention(nn.Module):
         return x
 
 class LayerNormGeneral(nn.Module):
-    def __init__(self, affine_shape=None, normalized_dim=(-1, ), scale=True, 
-        bias=True, eps=1e-5):
+    def __init__(self, affine_shape=None, normalized_dim=(-1, ), scale=True,
+                 bias=True, eps=1e-5):
         super().__init__()
         self.normalized_dim = normalized_dim
         self.use_scale = scale
@@ -199,22 +201,22 @@ class LayerNormWithoutBias(nn.Module):
         self.eps = eps
 
     def forward(self, x):
-        
+
         if x.dim() == 4:
             x = x.permute(0, 2, 3, 1)  # [B, H, W, C]
             x = F.layer_norm(x, self.weight.shape, self.weight, None, self.eps)
             x = x.permute(0, 3, 1, 2)  # [B, C, H, W]
-            
+
         else:
             x = F.layer_norm(x, self.weight.shape, self.weight, None, self.eps)
-            
+
         return x
 
 class SepConv(nn.Module):
     def __init__(self, dim, expansion_ratio=2,
-        act1_layer=StarReLU, act2_layer=nn.Identity, 
-        bias=False, kernel_size=7, padding=3,
-        **kwargs, ):
+                 act1_layer=StarReLU, act2_layer=nn.Identity,
+                 bias=False, kernel_size=7, padding=3,
+                 **kwargs):
         super().__init__()
         med_channels = int(expansion_ratio * dim)
         self.pwconv1 = nn.Linear(dim, med_channels, bias=bias)
@@ -261,7 +263,7 @@ class Mlp(nn.Module):
 
 class MlpHead(nn.Module):
     def __init__(self, dim, num_classes=1000, mlp_ratio=4, act_layer=SquaredReLU,
-        norm_layer=nn.LayerNorm, head_dropout=0., bias=True):
+                 norm_layer=nn.LayerNorm, head_dropout=0., bias=True):
         super().__init__()
         hidden_features = int(mlp_ratio * dim)
         self.fc1 = nn.Linear(dim, hidden_features, bias=bias)
@@ -283,8 +285,7 @@ class MetaFormerBlock(nn.Module):
                  token_mixer=nn.Identity, mlp=Mlp,
                  norm_layer=nn.LayerNorm,
                  drop=0., drop_path=0.,
-                 layer_scale_init_value=None, res_scale_init_value=None
-                 ):
+                 layer_scale_init_value=None, res_scale_init_value=None):
         super().__init__()
 
         self.norm1 = norm_layer(dim)
@@ -322,7 +323,7 @@ class MetaFormerBlock(nn.Module):
         return x10
 
 DOWNSAMPLE_LAYERS_FOUR_STAGES = [partial(Downsampling, kernel_size=7, stride=4, padding=2,
-                    post_norm=partial(LayerNormGeneral, bias=False, eps=1e-6)), 
+                    post_norm=partial(LayerNormGeneral, bias=False, eps=1e-6)),
                     partial(Downsampling, kernel_size=3, stride=2, padding=1,
                     pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True),
                     partial(Downsampling, kernel_size=3, stride=2, padding=1,
@@ -331,7 +332,7 @@ DOWNSAMPLE_LAYERS_FOUR_STAGES = [partial(Downsampling, kernel_size=7, stride=4, 
                     pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True)]
 
 class MetaFormer(nn.Module):
-    def __init__(self, in_chans=3, num_classes=1000, 
+    def __init__(self, in_chans=3, num_classes=1000,
                  depths=[2, 2, 6, 2],
                  dims=[64, 128, 320, 512],
                  downsample_layers=DOWNSAMPLE_LAYERS_FOUR_STAGES,
@@ -339,13 +340,12 @@ class MetaFormer(nn.Module):
                  mlps=Mlp,
                  norm_layers=partial(LayerNormWithoutBias, eps=1e-6),
                  drop_path_rate=0.,
-                 head_dropout=0.0, 
+                 head_dropout=0.0,
                  layer_scale_init_values=None,
                  res_scale_init_values=[None, None, 1.0, 1.0],
-                 output_norm=partial(nn.LayerNorm, eps=1e-6), 
+                 output_norm=partial(nn.LayerNorm, eps=1e-6),
                  head_fn=nn.Linear,
-                 **kwargs,
-                 ):
+                 **kwargs):
         super().__init__()
 
         self.num_classes = num_classes
@@ -471,7 +471,7 @@ def test_caformer_creation():
         'caformer_m36': caformer_m36,
         'caformer_b36': caformer_b36,
     }
-    
+
     for name, model_fn in models.items():
         try:
             model = model_fn(pretrained=False, num_classes=10)
@@ -482,4 +482,4 @@ def test_caformer_creation():
             print(f"✗ {name}: {e}")
 
 if __name__ == "__main__":
-    test_caformer_creation() 
+    test_caformer_creation()

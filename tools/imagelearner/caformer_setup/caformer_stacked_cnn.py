@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from typing import Dict, List, Optional
 
 import torch
 import torch.nn as nn
@@ -16,6 +17,7 @@ try:
 except ImportError as e:
     logger.warning(f" CAFormer models not available: {e}")
     CAFORMER_AVAILABLE = False
+
 
 class CAFormerStackedCNN(nn.Module):
     def __init__(self,
@@ -159,7 +161,7 @@ class CAFormerStackedCNN(nn.Module):
                 intermediate_dims.append(output_dim)
 
                 for i in range(num_layers):
-                    layers.append(nn.Linear(intermediate_dims[i], intermediate_dims[i+1], bias=use_bias))
+                    layers.append(nn.Linear(intermediate_dims[i], intermediate_dims[i + 1], bias=use_bias))
 
                     if i < num_layers - 1:
                         if activation == "relu":
@@ -175,9 +177,9 @@ class CAFormerStackedCNN(nn.Module):
                         layers.append(nn.Dropout(dropout))
 
                     if norm == "batch":
-                        layers.append(nn.BatchNorm1d(intermediate_dims[i+1]))
+                        layers.append(nn.BatchNorm1d(intermediate_dims[i + 1]))
                     elif norm == "layer":
-                        layers.append(nn.LayerNorm(intermediate_dims[i+1]))
+                        layers.append(nn.LayerNorm(intermediate_dims[i + 1]))
 
         return nn.Sequential(*layers)
 
@@ -203,6 +205,7 @@ class CAFormerStackedCNN(nn.Module):
     def output_shape(self):
         return [self.output_size]
 
+
 def create_caformer_stacked_cnn(model_name: str, **kwargs) -> CAFormerStackedCNN:
     print(f" CREATE_CAFORMER_STACKED_CNN called with model_name: {model_name} ")
     print(f"Creating CAFormer stacked CNN encoder: {model_name}")
@@ -211,15 +214,18 @@ def create_caformer_stacked_cnn(model_name: str, **kwargs) -> CAFormerStackedCNN
     print(f" CAFormer encoder created successfully: {type(encoder)} ")
     return encoder
 
+
 def patch_ludwig_stacked_cnn():
     # No unconditional print here
     return patch_ludwig_direct()
+
 
 def patch_ludwig_robust():
     # No unconditional print here
     try:
         from ludwig.encoders.registry import get_encoder_cls
         original_get_encoder_cls = get_encoder_cls
+
         def patched_get_encoder_cls(encoder_type):
             if encoder_type == "stacked_cnn":
                 return CAFormerStackedCNN
@@ -228,6 +234,7 @@ def patch_ludwig_robust():
         ludwig.encoders.registry.get_encoder_cls = patched_get_encoder_cls
         from ludwig.encoders.image.base import Stacked2DCNN
         original_stacked_cnn_init = Stacked2DCNN.__init__
+
         def patched_stacked_cnn_init(self, *args, **kwargs):
             custom_model = None
             if 'custom_model' in kwargs:
@@ -255,21 +262,24 @@ def patch_ludwig_robust():
         try:
             from ludwig.features.image_feature import ImageInputFeature
             original_image_feature_init = ImageInputFeature.__init__
+
             def patched_image_feature_init(self, *args, **kwargs):
                 original_image_feature_init(self, *args, **kwargs)
             ImageInputFeature.__init__ = patched_image_feature_init
-        except Exception as e:
+        except Exception:
             pass
         return True
     except Exception as e:
         logger.error(f"Failed to apply robust patch: {e}")
         return False
 
+
 def patch_ludwig_direct():
     # No unconditional print here
     try:
         from ludwig.encoders.registry import get_encoder_cls
         original_get_encoder_cls = get_encoder_cls
+
         def patched_get_encoder_cls(encoder_type):
             if encoder_type == "stacked_cnn":
                 return CAFormerStackedCNN
@@ -278,11 +288,12 @@ def patch_ludwig_direct():
         ludwig.encoders.registry.get_encoder_cls = patched_get_encoder_cls
         from ludwig.encoders.image.base import Stacked2DCNN
         original_stacked_cnn_init = Stacked2DCNN.__init__
+
         def patched_stacked_cnn_init(self, *args, **kwargs):
             custom_model = kwargs.get('custom_model', None)
             if custom_model and custom_model.startswith('caformer_'):
                 print(f"DETECTED CAFormer model: {custom_model}")
-                print(f"CAFormer encoder is being loaded and used.")
+                print("CAFormer encoder is being loaded and used.")
                 # call parent __init__ first to properly initialize the module
                 original_stacked_cnn_init(self, *args, **kwargs)
                 # create and assign caformer attributes
@@ -302,6 +313,7 @@ def patch_ludwig_direct():
     except Exception as e:
         logger.error(f"Failed to apply direct patch: {e}")
         return False
+
 
 def patch_ludwig_schema_validation():
     logger.info("PATCH_LUDWIG_SCHEMA_VALIDATION function called")
@@ -327,6 +339,7 @@ def patch_ludwig_schema_validation():
         logger.error(f"Could not patch schema validation: {e}")
         return False
 
+
 def patch_ludwig_comprehensive():
     logger.info("PATCH_LUDWIG_COMPREHENSIVE function called")
 
@@ -337,6 +350,7 @@ def patch_ludwig_comprehensive():
     logger.info(f"Patch results: robust={patch1}, direct={patch2}, schema={patch3}")
 
     return patch1 or patch2 or patch3
+
 
 def test_caformer_stacked_cnn():
     if not CAFORMER_AVAILABLE:
@@ -356,7 +370,7 @@ def test_caformer_stacked_cnn():
         dummy_input = torch.randn(2, 3, 224, 224)
         output = encoder(dummy_input)
 
-        print(f"  CAFormerStackedCNN test passed")
+        print("  CAFormerStackedCNN test passed")
         print(f"  Input shape: {dummy_input.shape}")
         print(f"  Output shape: {output['encoder_output'].shape}")
 
@@ -366,4 +380,3 @@ def test_caformer_stacked_cnn():
 
 if __name__ == "__main__":
     test_caformer_stacked_cnn()
-

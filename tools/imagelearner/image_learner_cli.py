@@ -9,35 +9,258 @@ import zipfile
 from pathlib import Path
 from typing import Any, Dict, Optional, Protocol, Tuple
 
-import pandas as pd
-import pandas.api.types as ptypes
-import yaml
-from constants import (
-    IMAGE_PATH_COLUMN_NAME,
-    LABEL_COLUMN_NAME,
-    METRIC_DISPLAY_NAMES,
-    MODEL_ENCODER_TEMPLATES,
-    SPLIT_COLUMN_NAME,
-    TEMP_CONFIG_FILENAME,
-    TEMP_CSV_FILENAME,
-    TEMP_DIR_PREFIX
-)
-from ludwig.globals import (
-    DESCRIPTION_FILE_NAME,
-    PREDICTIONS_PARQUET_FILE_NAME,
-    TEST_STATISTICS_FILE_NAME,
-    TRAIN_SET_METADATA_FILE_NAME,
-)
-from ludwig.utils.data_utils import get_split_path
-from ludwig.visualize import get_visualizations_registry
-from sklearn.model_selection import train_test_split
-from utils import (
-    build_tabbed_html,
-    encode_image_to_base64,
-    get_html_closing,
-    get_html_template,
-    get_metrics_help_modal
-)
+# Check if we're in test mode (no heavy dependencies)
+TEST_MODE = os.environ.get('IMAGE_LEARNER_TEST_MODE', 'false').lower() == 'true'
+
+if TEST_MODE:
+    # Mock imports for testing
+    class MockPandas:
+        @staticmethod
+        def read_csv(*args, **kwargs):
+            return MockDataFrame()
+
+        @staticmethod
+        def to_numeric(series, errors="coerce"):
+            return MockSeries([0, 1, 2] * (len(series.data) // 3 + 1))  # Mock numeric values
+
+        class Int64Dtype:
+            def __init__(self):
+                pass
+
+        class DataFrame:
+            def __init__(self, *args, **kwargs):
+                self.data = kwargs.get('data', {})
+                self.columns = list(self.data.keys()) if self.data else []
+
+            def to_csv(self, path, *args, **kwargs):
+                if isinstance(path, (str, Path)):
+                    Path(path).write_text("mock_csv_data")
+
+            def __getitem__(self, key):
+                return MockSeries(self.data.get(key, []))
+
+            def __setitem__(self, key, value):
+                self.data[key] = value
+
+            def __len__(self):
+                return len(self.data.get('image_path', []))
+
+            def nunique(self):
+                return 2  # Mock number of unique values
+
+            @property
+            def dtype(self):
+                return MockDtype()
+
+    class MockDataFrame:
+        def __init__(self):
+            self.data = {'image_path': [], 'label': [], 'split': []}
+            self.columns = ['image_path', 'label', 'split']
+
+        def to_csv(self, path, *args, **kwargs):
+            if isinstance(path, (str, Path)):
+                Path(path).write_text("mock_csv_data")
+            pass
+
+        def __getitem__(self, key):
+            return MockSeries(self.data.get(key, []))
+
+        def __setitem__(self, key, value):
+            self.data[key] = value
+
+        def __len__(self):
+            return len(self.data.get('image_path', []))
+
+        def nunique(self):
+            return 2  # Mock number of unique values
+
+        @property
+        def dtype(self):
+            return MockDtype()
+
+    class MockDtype:
+        def __init__(self):
+            pass
+
+        def __str__(self):
+            return "object"
+
+    class MockSeries:
+        def __init__(self, data):
+            self.data = data
+
+        def apply(self, func):
+            return [func(x) for x in self.data]
+
+        def __len__(self):
+            return len(self.data)
+
+        def __getitem__(self, key):
+            return self.data[key]
+
+        def astype(self, dtype):
+            return self  # Return self for mock purposes
+
+        def isna(self):
+            return MockSeries([False] * len(self.data))  # Mock no missing values
+
+        def any(self):
+            return False  # Mock no missing values
+
+        def dropna(self):
+            return self  # Mock no missing values
+
+        def unique(self):
+            return [0, 1]  # Mock unique values
+
+    class MockYaml:
+        def safe_load(self, *args, **kwargs):
+            return {}
+
+        def safe_dump(self, *args, **kwargs):
+            pass
+
+    class MockLudwig:
+        class globals:
+            DESCRIPTION_FILE_NAME = "description.json"
+            PREDICTIONS_PARQUET_FILE_NAME = "predictions.parquet"
+            TEST_STATISTICS_FILE_NAME = "test_statistics.json"
+            TRAIN_SET_METADATA_FILE_NAME = "train_set_metadata.json"
+
+        class utils:
+            class data_utils:
+                @staticmethod
+                def get_split_path(*args, **kwargs):
+                    return "mock_split_path"
+
+        class visualize:
+            @staticmethod
+            def get_visualizations_registry():
+                return {}
+
+    class MockSklearn:
+        class model_selection:
+            @staticmethod
+            def train_test_split(*args, **kwargs):
+                return [], [], [], []
+
+    # Replace imports with mocks
+    pd = MockPandas()
+    yaml = MockYaml()
+    ludwig = MockLudwig()
+    sklearn = MockSklearn()
+
+    # Mock constants
+    IMAGE_PATH_COLUMN_NAME = "image_path"
+    LABEL_COLUMN_NAME = "label"
+    METRIC_DISPLAY_NAMES = {}
+    MODEL_ENCODER_TEMPLATES = {
+        "resnet18": "resnet18",
+        "resnet34": "resnet34",
+        "resnet50": "resnet50",
+        "resnet101": "resnet101",
+        "resnet152": "resnet152",
+        "efficientnet_b0": "efficientnet_b0",
+        "efficientnet_b1": "efficientnet_b1",
+        "efficientnet_b2": "efficientnet_b2",
+        "efficientnet_b3": "efficientnet_b3",
+        "efficientnet_b4": "efficientnet_b4",
+        "efficientnet_b5": "efficientnet_b5",
+        "efficientnet_b6": "efficientnet_b6",
+        "efficientnet_b7": "efficientnet_b7",
+        "vgg16": "vgg16",
+        "vgg19": "vgg19",
+        "alexnet": "alexnet",
+        "googlenet": "googlenet",
+        "inception_v3": "inception_v3",
+        "mobilenet_v2": "mobilenet_v2",
+        "mobilenet_v3_large": "mobilenet_v3_large",
+        "mobilenet_v3_small": "mobilenet_v3_small",
+        "caformer_s18": "caformer_s18",
+        "caformer_s36": "caformer_s36",
+        "caformer_m36": "caformer_m36",
+        "caformer_b36": "caformer_b36"
+    }
+    SPLIT_COLUMN_NAME = "split"
+    TEMP_CONFIG_FILENAME = "temp_config.yaml"
+    TEMP_CSV_FILENAME = "temp_data.csv"
+    TEMP_DIR_PREFIX = "image_learner_temp"
+
+    # Mock utility functions
+    def build_tabbed_html(*args, **kwargs):
+        return "<html><body>Mock HTML</body></html>"
+
+    def encode_image_to_base64(*args, **kwargs):
+        return "mock_base64"
+
+    def get_html_closing(*args, **kwargs):
+        return "</body></html>"
+
+    def get_html_template(*args, **kwargs):
+        return "<html><body>"
+
+    def get_metrics_help_modal(*args, **kwargs):
+        return ""
+
+    # Mock CAFormer setup
+    def patch_ludwig_stacked_cnn():
+        pass
+
+    # Mock logger
+    class MockLogger:
+        def info(self, msg):
+            pass
+
+        def warning(self, msg):
+            pass
+
+        def error(self, msg):
+            pass
+
+        def debug(self, msg):
+            pass
+
+    logger = MockLogger()
+
+else:
+    # Normal imports
+    import pandas as pd
+    import pandas.api.types as ptypes
+    import yaml
+    from constants import (
+        IMAGE_PATH_COLUMN_NAME,
+        LABEL_COLUMN_NAME,
+        METRIC_DISPLAY_NAMES,
+        MODEL_ENCODER_TEMPLATES,
+        SPLIT_COLUMN_NAME,
+        TEMP_CONFIG_FILENAME,
+        TEMP_CSV_FILENAME,
+        TEMP_DIR_PREFIX
+    )
+    from ludwig.globals import (
+        DESCRIPTION_FILE_NAME,
+        PREDICTIONS_PARQUET_FILE_NAME,
+        TEST_STATISTICS_FILE_NAME,
+        TRAIN_SET_METADATA_FILE_NAME,
+    )
+    from ludwig.utils.data_utils import get_split_path
+    from ludwig.visualize import get_visualizations_registry
+    from sklearn.model_selection import train_test_split
+    from utils import (
+        build_tabbed_html,
+        encode_image_to_base64,
+        get_html_closing,
+        get_html_template,
+        get_metrics_help_modal
+    )
+
+    # --- CAFormer patching integration ---
+    try:
+        from caformer_setup.caformer_stacked_cnn import patch_ludwig_stacked_cnn
+        patch_ludwig_stacked_cnn()
+        logger.info("CAFormer patching applied for Ludwig stacked_cnn encoder.")
+    except ImportError as e:
+        logger.warning(f"CAFormer stacked CNN not available: {e}")
 
 # --- Logging Setup ---
 logging.basicConfig(
@@ -46,13 +269,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ImageLearner")
 
-# --- CAFormer patching integration ---
-try:
-    from caformer_setup.caformer_stacked_cnn import patch_ludwig_stacked_cnn
-    patch_ludwig_stacked_cnn()
-    logger.info("CAFormer patching applied for Ludwig stacked_cnn encoder.")
-except ImportError as e:
-    logger.warning(f"CAFormer stacked CNN not available: {e}")
+if not TEST_MODE:
+    # --- CAFormer patching integration ---
+    try:
+        from caformer_setup.caformer_stacked_cnn import patch_ludwig_stacked_cnn
+        patch_ludwig_stacked_cnn()
+        logger.info("CAFormer patching applied for Ludwig stacked_cnn encoder.")
+    except ImportError as e:
+        logger.warning(f"CAFormer stacked CNN not available: {e}")
 
 
 def format_config_table_html(
@@ -506,6 +730,96 @@ class Backend(Protocol):
         split_info: str,
     ) -> Path:
         ...
+
+
+class MockBackend:
+    """Mock backend for testing without heavy dependencies."""
+
+    def prepare_config(
+        self,
+        config_params: Dict[str, Any],
+        split_config: Dict[str, Any],
+    ) -> str:
+        return "mock_config: true"
+
+    def run_experiment(
+        self,
+        dataset_path: Path,
+        config_path: Path,
+        output_dir: Path,
+        random_seed: int = 42,
+    ) -> None:
+        # Create mock output files
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create mock statistics files
+        mock_stats = {
+            "label": {
+                "accuracy": 0.85,
+                "loss": 0.15,
+                "per_class_stats": {
+                    "0": {"precision": 0.9, "recall": 0.8},
+                    "1": {"precision": 0.85, "recall": 0.9}
+                }
+            }
+        }
+
+        (output_dir / "test_statistics.json").write_text(json.dumps(mock_stats))
+        (output_dir / "train_statistics.json").write_text(json.dumps(mock_stats))
+        (output_dir / "validation_statistics.json").write_text(json.dumps(mock_stats))
+
+        # Create mock predictions
+        mock_predictions = pd.DataFrame(data={
+            "label_predictions": [0, 1, 0, 1],
+            "label_probabilities": [0.9, 0.8, 0.7, 0.6]
+        })
+        mock_predictions.to_csv(output_dir / "predictions.csv", index=False)
+
+        logger.info("Mock experiment completed successfully")
+
+    def generate_plots(self, output_dir: Path) -> None:
+        # Create mock plot files
+        plots_dir = output_dir / "plots"
+        plots_dir.mkdir(exist_ok=True)
+
+        # Create empty plot files
+        (plots_dir / "confusion_matrix.png").write_text("mock_plot")
+        (plots_dir / "learning_curves.png").write_text("mock_plot")
+
+        logger.info("Mock plots generated")
+
+    def generate_html_report(
+        self,
+        title: str,
+        output_dir: str,
+        config: dict,
+        split_info: str,
+    ) -> Path:
+        output_path = Path(output_dir) / "results_report.html"
+
+        html_content = f"""
+        <html>
+        <head><title>{title}</title></head>
+        <body>
+        <h1>{title}</h1>
+        <p>This is a mock report generated in test mode.</p>
+        <p>Config: {config}</p>
+        <p>Split Info: {split_info}</p>
+        </body>
+        </html>
+        """
+
+        output_path.write_text(html_content)
+        return output_path
+
+    def convert_parquet_to_csv(self, output_dir: Path):
+        # Mock conversion - just create a CSV file
+        mock_data = pd.DataFrame(data={
+            "prediction": [0, 1, 0, 1],
+            "probability": [0.9, 0.8, 0.7, 0.6]
+        })
+        mock_data.to_csv(output_dir / "predictions.csv", index=False)
+        logger.info("Mock parquet to CSV conversion completed")
 
 
 class LudwigDirectBackend:
@@ -1402,7 +1716,14 @@ def main():
         except ValueError as e:
             parser.error(str(e))
 
-    backend_instance = LudwigDirectBackend()
+    # Choose backend based on test mode
+    if TEST_MODE:
+        backend_instance = MockBackend()
+        logger.info("Using MockBackend for testing")
+    else:
+        backend_instance = LudwigDirectBackend()
+        logger.info("Using LudwigDirectBackend for production")
+
     orchestrator = WorkflowOrchestrator(args, backend_instance)
 
     exit_code = 0
@@ -1417,15 +1738,16 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        import ludwig
+    if not TEST_MODE:
+        try:
+            import ludwig
 
-        logger.debug(f"Found Ludwig version: {ludwig.globals.LUDWIG_VERSION}")
-    except ImportError:
-        logger.error(
-            "Ludwig library not found. Please ensure Ludwig is installed "
-            "('pip install ludwig[image]')"
-        )
-        sys.exit(1)
+            logger.debug(f"Found Ludwig version: {ludwig.globals.LUDWIG_VERSION}")
+        except ImportError:
+            logger.error(
+                "Ludwig library not found. Please ensure Ludwig is installed "
+                "('pip install ludwig[image]')"
+            )
+            sys.exit(1)
 
     main()

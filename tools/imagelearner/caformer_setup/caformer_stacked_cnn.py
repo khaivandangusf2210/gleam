@@ -359,9 +359,10 @@ def test_caformer_stacked_cnn():
         print(f"  CAFormerStackedCNN test passed")
         print(f"  Input shape: {dummy_input.shape}")
         print(f"  Output shape: {output['encoder_output'].shape}")
-        
+
     except Exception as e:
         print(f" CAFormerStackedCNN test failed: {e}")
 
+
 if __name__ == "__main__":
-    test_caformer_stacked_cnn() 
+    test_caformer_stacked_cnn()

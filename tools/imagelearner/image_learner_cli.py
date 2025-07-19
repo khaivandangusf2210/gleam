@@ -48,7 +48,6 @@ logger = logging.getLogger("ImageLearner")
 
 # --- CAFormer patching integration ---
 try:
-    import caformer_setup.caformer_stacked_cnn as caformer_stacked_cnn
     from caformer_setup.caformer_stacked_cnn import patch_ludwig_stacked_cnn
     patch_ludwig_stacked_cnn()
     logger.info("CAFormer patching applied for Ludwig stacked_cnn encoder.")

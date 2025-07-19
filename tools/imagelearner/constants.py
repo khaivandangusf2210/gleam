@@ -86,14 +86,14 @@ MODEL_ENCODER_TEMPLATES: Dict[str, Any] = {
         "trainable": True,
     },
     "caformer_s36": {
-        "type": "stacked_cnn", 
+        "type": "stacked_cnn",
         "custom_model": "caformer_s36",
         "use_pretrained": True,
         "trainable": True,
     },
     "caformer_m36": {
         "type": "stacked_cnn",
-        "custom_model": "caformer_m36", 
+        "custom_model": "caformer_m36",
         "use_pretrained": True,
         "trainable": True,
     },

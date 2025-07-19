@@ -18,129 +18,138 @@ if TEST_MODE:
         @staticmethod
         def read_csv(*args, **kwargs):
             return MockDataFrame()
-        
+
         @staticmethod
         def to_numeric(series, errors="coerce"):
             return MockSeries([0, 1, 2] * (len(series.data) // 3 + 1))  # Mock numeric values
-        
+
         class Int64Dtype:
             def __init__(self):
                 pass
-        
+
         class DataFrame:
             def __init__(self, *args, **kwargs):
                 self.data = kwargs.get('data', {})
                 self.columns = list(self.data.keys()) if self.data else []
-            
+
             def to_csv(self, path, *args, **kwargs):
                 if isinstance(path, (str, Path)):
                     Path(path).write_text("mock_csv_data")
-            
+
             def __getitem__(self, key):
                 return MockSeries(self.data.get(key, []))
-            
+
             def __setitem__(self, key, value):
                 self.data[key] = value
-            
+
             def __len__(self):
                 return len(self.data.get('image_path', []))
-            
+
             def nunique(self):
                 return 2  # Mock number of unique values
-            
+
             @property
             def dtype(self):
                 return MockDtype()
-    
+
     class MockDataFrame:
         def __init__(self):
             self.data = {'image_path': [], 'label': [], 'split': []}
             self.columns = ['image_path', 'label', 'split']
-        
+
         def to_csv(self, path, *args, **kwargs):
             if isinstance(path, (str, Path)):
                 Path(path).write_text("mock_csv_data")
             pass
-        
+
         def __getitem__(self, key):
             return MockSeries(self.data.get(key, []))
-        
+
         def __setitem__(self, key, value):
             self.data[key] = value
-        
+
         def __len__(self):
             return len(self.data.get('image_path', []))
-        
+
         def nunique(self):
             return 2  # Mock number of unique values
-        
+
         @property
         def dtype(self):
             return MockDtype()
-    
+
     class MockDtype:
         def __init__(self):
             pass
-        
+
         def __str__(self):
             return "object"
-    
+
     class MockSeries:
         def __init__(self, data):
             self.data = data
-        
+
         def apply(self, func):
             return [func(x) for x in self.data]
-        
+
         def __len__(self):
             return len(self.data)
-        
+
         def __getitem__(self, key):
             return self.data[key]
-        
+
         def astype(self, dtype):
             return self  # Return self for mock purposes
-        
+
         def isna(self):
             return MockSeries([False] * len(self.data))  # Mock no missing values
-    
+
+        def any(self):
+            return False  # Mock no missing values
+
+        def dropna(self):
+            return self  # Mock no missing values
+
+        def unique(self):
+            return [0, 1]  # Mock unique values
+
     class MockYaml:
         def safe_load(self, *args, **kwargs):
             return {}
-        
+
         def safe_dump(self, *args, **kwargs):
             pass
-    
+
     class MockLudwig:
         class globals:
             DESCRIPTION_FILE_NAME = "description.json"
             PREDICTIONS_PARQUET_FILE_NAME = "predictions.parquet"
             TEST_STATISTICS_FILE_NAME = "test_statistics.json"
             TRAIN_SET_METADATA_FILE_NAME = "train_set_metadata.json"
-        
+
         class utils:
             class data_utils:
                 @staticmethod
                 def get_split_path(*args, **kwargs):
                     return "mock_split_path"
-        
+
         class visualize:
             @staticmethod
             def get_visualizations_registry():
                 return {}
-    
+
     class MockSklearn:
         class model_selection:
             @staticmethod
             def train_test_split(*args, **kwargs):
                 return [], [], [], []
-    
+
     # Replace imports with mocks
     pd = MockPandas()
     yaml = MockYaml()
     ludwig = MockLudwig()
     sklearn = MockSklearn()
-    
+
     # Mock constants
     IMAGE_PATH_COLUMN_NAME = "image_path"
     LABEL_COLUMN_NAME = "label"
@@ -176,26 +185,42 @@ if TEST_MODE:
     TEMP_CONFIG_FILENAME = "temp_config.yaml"
     TEMP_CSV_FILENAME = "temp_data.csv"
     TEMP_DIR_PREFIX = "image_learner_temp"
-    
+
     # Mock utility functions
     def build_tabbed_html(*args, **kwargs):
         return "<html><body>Mock HTML</body></html>"
-    
+
     def encode_image_to_base64(*args, **kwargs):
         return "mock_base64"
-    
+
     def get_html_closing(*args, **kwargs):
         return "</body></html>"
-    
+
     def get_html_template(*args, **kwargs):
         return "<html><body>"
-    
+
     def get_metrics_help_modal(*args, **kwargs):
         return ""
-    
+
     # Mock CAFormer setup
     def patch_ludwig_stacked_cnn():
         pass
+
+    # Mock logger
+    class MockLogger:
+        def info(self, msg):
+            pass
+
+        def warning(self, msg):
+            pass
+
+        def error(self, msg):
+            pass
+
+        def debug(self, msg):
+            pass
+
+    logger = MockLogger()
 
 else:
     # Normal imports
@@ -709,14 +734,14 @@ class Backend(Protocol):
 
 class MockBackend:
     """Mock backend for testing without heavy dependencies."""
-    
+
     def prepare_config(
         self,
         config_params: Dict[str, Any],
         split_config: Dict[str, Any],
     ) -> str:
         return "mock_config: true"
-    
+
     def run_experiment(
         self,
         dataset_path: Path,
@@ -726,7 +751,7 @@ class MockBackend:
     ) -> None:
         # Create mock output files
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Create mock statistics files
         mock_stats = {
             "label": {
@@ -738,31 +763,31 @@ class MockBackend:
                 }
             }
         }
-        
+
         (output_dir / "test_statistics.json").write_text(json.dumps(mock_stats))
         (output_dir / "train_statistics.json").write_text(json.dumps(mock_stats))
         (output_dir / "validation_statistics.json").write_text(json.dumps(mock_stats))
-        
+
         # Create mock predictions
         mock_predictions = pd.DataFrame(data={
             "label_predictions": [0, 1, 0, 1],
             "label_probabilities": [0.9, 0.8, 0.7, 0.6]
         })
         mock_predictions.to_csv(output_dir / "predictions.csv", index=False)
-        
+
         logger.info("Mock experiment completed successfully")
-    
+
     def generate_plots(self, output_dir: Path) -> None:
         # Create mock plot files
         plots_dir = output_dir / "plots"
         plots_dir.mkdir(exist_ok=True)
-        
+
         # Create empty plot files
         (plots_dir / "confusion_matrix.png").write_text("mock_plot")
         (plots_dir / "learning_curves.png").write_text("mock_plot")
-        
+
         logger.info("Mock plots generated")
-    
+
     def generate_html_report(
         self,
         title: str,
@@ -771,7 +796,7 @@ class MockBackend:
         split_info: str,
     ) -> Path:
         output_path = Path(output_dir) / "results_report.html"
-        
+
         html_content = f"""
         <html>
         <head><title>{title}</title></head>
@@ -783,10 +808,10 @@ class MockBackend:
         </body>
         </html>
         """
-        
+
         output_path.write_text(html_content)
         return output_path
-    
+
     def convert_parquet_to_csv(self, output_dir: Path):
         # Mock conversion - just create a CSV file
         mock_data = pd.DataFrame(data={
@@ -1698,7 +1723,7 @@ def main():
     else:
         backend_instance = LudwigDirectBackend()
         logger.info("Using LudwigDirectBackend for production")
-    
+
     orchestrator = WorkflowOrchestrator(args, backend_instance)
 
     exit_code = 0

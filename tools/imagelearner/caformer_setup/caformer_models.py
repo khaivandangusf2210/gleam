@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 def trunc_normal_(tensor, mean=0., std=1., a=-2., b=2.):
     def norm_cdf(x):
         return (1. + math.erf(x / math.sqrt(2.))) / 2.
@@ -37,19 +38,23 @@ class DropPath(nn.Module):
         output = x.div(keep_prob) * random_tensor
         return output
 
+
 def to_2tuple(x):
     if isinstance(x, (list, tuple)):
         return x
     return (x, x)
+
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 
 _model_registry = {}
 
+
 def register_model(fn):
     _model_registry[fn.__name__] = fn
     return fn
+
 
 def _cfg(url='', **kwargs):
     return {
@@ -59,6 +64,7 @@ def _cfg(url='', **kwargs):
         'mean': IMAGENET_DEFAULT_MEAN, 'std': IMAGENET_DEFAULT_STD, 'classifier': 'head',
         **kwargs
     }
+
 
 default_cfgs = {
     'caformer_s18': _cfg(url='https://huggingface.co/sail/dl/resolve/main/caformer/caformer_s18.pth'),
@@ -86,6 +92,7 @@ default_cfgs = {
     'caformer_b36_in21k': _cfg(url='https://huggingface.co/sail/dl/resolve/main/caformer/caformer_b36_in21k.pth', num_classes=21841),
 }
 
+
 class Downsampling(nn.Module):
     def __init__(self, in_channels, out_channels,
                  kernel_size, stride=1, padding=0,
@@ -108,6 +115,7 @@ class Downsampling(nn.Module):
             x = x.permute(0, 3, 1, 2)
         return x
 
+
 class Scale(nn.Module):
     def __init__(self, dim, init_value=1.0, trainable=True):
         super().__init__()
@@ -119,12 +127,15 @@ class Scale(nn.Module):
             return x * scale
         return x * self.scale
 
+
 class SquaredReLU(nn.Module):
     def __init__(self, inplace=False):
         super().__init__()
         self.relu = nn.ReLU(inplace=inplace)
+
     def forward(self, x):
         return torch.square(self.relu(x))
+
 
 class StarReLU(nn.Module):
     def __init__(self, scale_value=1.0, bias_value=0.0,
@@ -134,11 +145,13 @@ class StarReLU(nn.Module):
         self.inplace = inplace
         self.relu = nn.ReLU(inplace=inplace)
         self.scale = nn.Parameter(scale_value * torch.ones(1),
-                                 requires_grad=scale_learnable)
+                                  requires_grad=scale_learnable)
         self.bias = nn.Parameter(bias_value * torch.ones(1),
-                                requires_grad=bias_learnable)
+                                 requires_grad=bias_learnable)
+
     def forward(self, x):
-        return self.scale * self.relu(x)**2 + self.bias
+        return self.scale * self.relu(x) ** 2 + self.bias
+
 
 class Attention(nn.Module):
     def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None,
@@ -167,6 +180,7 @@ class Attention(nn.Module):
         x = self.proj_drop(x)
         return x
 
+
 class LayerNormGeneral(nn.Module):
     def __init__(self, affine_shape=None, normalized_dim=(-1, ), scale=True,
                  bias=True, eps=1e-5):
@@ -194,6 +208,7 @@ class LayerNormGeneral(nn.Module):
             x = x + self.bias
         return x
 
+
 class LayerNormWithoutBias(nn.Module):
     def __init__(self, normalized_shape, eps=1e-5, **kwargs):
         super().__init__()
@@ -211,6 +226,7 @@ class LayerNormWithoutBias(nn.Module):
             x = F.layer_norm(x, self.weight.shape, self.weight, None, self.eps)
 
         return x
+
 
 class SepConv(nn.Module):
     def __init__(self, dim, expansion_ratio=2,
@@ -239,6 +255,7 @@ class SepConv(nn.Module):
             x = input + x
         return x
 
+
 class Mlp(nn.Module):
     def __init__(self, dim, mlp_ratio=4, out_features=None, act_layer=StarReLU, drop=0., bias=False, **kwargs):
         super().__init__()
@@ -261,6 +278,7 @@ class Mlp(nn.Module):
         x = self.drop2(x)
         return x
 
+
 class MlpHead(nn.Module):
     def __init__(self, dim, num_classes=1000, mlp_ratio=4, act_layer=SquaredReLU,
                  norm_layer=nn.LayerNorm, head_dropout=0., bias=True):
@@ -279,6 +297,7 @@ class MlpHead(nn.Module):
         x = self.fc2(x)
         x = self.head_dropout(x)
         return x
+
 
 class MetaFormerBlock(nn.Module):
     def __init__(self, dim,
@@ -322,14 +341,16 @@ class MetaFormerBlock(nn.Module):
         x10 = self.res_scale2(x10)
         return x10
 
+
 DOWNSAMPLE_LAYERS_FOUR_STAGES = [partial(Downsampling, kernel_size=7, stride=4, padding=2,
-                    post_norm=partial(LayerNormGeneral, bias=False, eps=1e-6)),
-                    partial(Downsampling, kernel_size=3, stride=2, padding=1,
-                    pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True),
-                    partial(Downsampling, kernel_size=3, stride=2, padding=1,
-                    pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True),
-                    partial(Downsampling, kernel_size=3, stride=2, padding=1,
-                    pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True)]
+                                         post_norm=partial(LayerNormGeneral, bias=False, eps=1e-6)),
+                                 partial(Downsampling, kernel_size=3, stride=2, padding=1,
+                                         pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True),
+                                 partial(Downsampling, kernel_size=3, stride=2, padding=1,
+                                         pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True),
+                                 partial(Downsampling, kernel_size=3, stride=2, padding=1,
+                                         pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True)]
+
 
 class MetaFormer(nn.Module):
     def __init__(self, in_chans=3, num_classes=1000,
@@ -359,25 +380,25 @@ class MetaFormer(nn.Module):
         self.downsample_layers.append(stem)
         for i in range(3):
             downsample_layer = nn.Sequential(
-                    nn.Conv2d(dims[i], dims[i+1], kernel_size=2, stride=2),
-                    norm_layers(dims[i+1])
+                nn.Conv2d(dims[i], dims[i + 1], kernel_size=2, stride=2),
+                norm_layers(dims[i + 1])
             )
             self.downsample_layers.append(downsample_layer)
 
         self.stages = nn.ModuleList()
-        dp_rates=[x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
+        dp_rates = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
 
         cur = 0
         for i in range(4):
             stage = nn.Sequential(
                 *[MetaFormerBlock(dim=dims[i],
-                token_mixer=token_mixers[i] if isinstance(token_mixers, (list, tuple)) else token_mixers,
-                mlp=mlps[i] if isinstance(mlps, (list, tuple)) else mlps,
-                norm_layer=norm_layers[i] if isinstance(norm_layers, (list, tuple)) else norm_layers,
-                drop_path=dp_rates[cur + j],
-                layer_scale_init_value=layer_scale_init_values[i] if isinstance(layer_scale_init_values, (list, tuple)) else layer_scale_init_values,
-                res_scale_init_value=res_scale_init_values[i] if isinstance(res_scale_init_values, (list, tuple)) else res_scale_init_values,
-                ) for j in range(depths[i])]
+                                  token_mixer=token_mixers[i] if isinstance(token_mixers, (list, tuple)) else token_mixers,
+                                  mlp=mlps[i] if isinstance(mlps, (list, tuple)) else mlps,
+                                  norm_layer=norm_layers[i] if isinstance(norm_layers, (list, tuple)) else norm_layers,
+                                  drop_path=dp_rates[cur + j],
+                                  layer_scale_init_value=layer_scale_init_values[i] if isinstance(layer_scale_init_values, (list, tuple)) else layer_scale_init_values,
+                                  res_scale_init_value=res_scale_init_values[i] if isinstance(res_scale_init_values, (list, tuple)) else res_scale_init_values,
+                                  ) for j in range(depths[i])]
             )
             self.stages.append(stage)
             cur += depths[i]
@@ -416,6 +437,7 @@ class MetaFormer(nn.Module):
         x = self.head(x)
         return x
 
+
 @register_model
 def caformer_s18(pretrained=False, **kwargs):
     model = MetaFormer(
@@ -427,6 +449,7 @@ def caformer_s18(pretrained=False, **kwargs):
     )
     model.default_cfg = default_cfgs['caformer_s18']
     return model
+
 
 @register_model
 def caformer_s36(pretrained=False, **kwargs):
@@ -440,6 +463,7 @@ def caformer_s36(pretrained=False, **kwargs):
     model.default_cfg = default_cfgs['caformer_s36']
     return model
 
+
 @register_model
 def caformer_m36(pretrained=False, **kwargs):
     model = MetaFormer(
@@ -452,6 +476,7 @@ def caformer_m36(pretrained=False, **kwargs):
     model.default_cfg = default_cfgs['caformer_m36']
     return model
 
+
 @register_model
 def caformer_b36(pretrained=False, **kwargs):
     model = MetaFormer(
@@ -463,6 +488,7 @@ def caformer_b36(pretrained=False, **kwargs):
     )
     model.default_cfg = default_cfgs['caformer_b36']
     return model
+
 
 def test_caformer_creation():
     models = {
@@ -480,6 +506,7 @@ def test_caformer_creation():
             print(f"✓ {name}: {output.shape}")
         except Exception as e:
             print(f"✗ {name}: {e}")
+
 
 if __name__ == "__main__":
     test_caformer_creation()

@@ -518,7 +518,7 @@ def create_stratified_random_split(
     min_samples_per_class = label_counts.min()
 
     # ensure we have enough samples for stratification
-    if min_samples_per_class < 3:  
+    if min_samples_per_class < 3:
         logger.warning(f"Insufficient samples per class for stratification (min: {min_samples_per_class}); using random split")
         # fall back to simple random assignment
         indices = out.index.tolist()

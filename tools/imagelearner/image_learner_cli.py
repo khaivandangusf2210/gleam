@@ -441,11 +441,11 @@ def split_data_0_2(
             # Force stratify even with fewer samples - adjust validation_size if needed
             min_samples_per_class = label_counts.min()
             if min_samples_per_class * validation_size < 1:
-                # Adjust validation_size to ensure at least 1 sample per class
-                adjusted_validation_size = 1.0 / min_samples_per_class
-                if adjusted_validation_size < validation_size:
+                # Adjust validation_size to ensure at least 1 sample per class, but do not exceed original validation_size
+                adjusted_validation_size = min(validation_size, 1.0 / min_samples_per_class)
+                if adjusted_validation_size != validation_size:
                     validation_size = adjusted_validation_size
-                    logger.info(f"Adjusted validation_size to {validation_size:.3f} to ensure stratification")
+                    logger.info(f"Adjusted validation_size to {validation_size:.3f} to ensure at least one sample per class in validation")
             stratify_arr = out.loc[idx_train, label_column]
             logger.info("Using stratified split for validation set")
         else:
@@ -517,9 +517,14 @@ def create_stratified_random_split(
     label_counts = out[label_column].value_counts()
     min_samples_per_class = label_counts.min()
 
-    # ensure we have enough samples for stratification
-    if min_samples_per_class < 3:
-        logger.warning(f"Insufficient samples per class for stratification (min: {min_samples_per_class}); using random split")
+    # ensure we have enough samples for stratification:
+    # Each class must have at least as many samples as the number of splits,
+    # so that each split can receive at least one sample per class.
+    min_samples_required = len(split_probabilities)
+    if min_samples_per_class < min_samples_required:
+        logger.warning(
+            f"Insufficient samples per class for stratification (min: {min_samples_per_class}, required: {min_samples_required}); using random split"
+        )
         # fall back to simple random assignment
         indices = out.index.tolist()
         np.random.seed(random_state)

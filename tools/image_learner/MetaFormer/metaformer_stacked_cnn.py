@@ -30,7 +30,9 @@ except Exception as e:
 def _resolve_metaformer_ctor(model_name: str):
     # Prefer getattr to avoid importing every factory explicitly
     try:
-        from metaformer_models import __dict__ as _factories
+        # Import the module itself for dynamic access
+        import metaformer_models
+        _factories = metaformer_models.__dict__
         if model_name in _factories and callable(_factories[model_name]):
             return _factories[model_name]
     except Exception:

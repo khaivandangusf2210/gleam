@@ -30,7 +30,6 @@ from ludwig.globals import (
     TRAIN_SET_METADATA_FILE_NAME,
 )
 from ludwig.utils.data_utils import get_split_path
-from ludwig.visualize import get_visualizations_registry
 from sklearn.model_selection import train_test_split
 from utils import (
     build_tabbed_html,
@@ -46,6 +45,19 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
 )
 logger = logging.getLogger("ImageLearner")
+
+# --- MetaFormer patching integration ---
+_metaformer_patch_ok = False
+try:
+    from MetaFormer.metaformer_stacked_cnn import patch_ludwig_stacked_cnn as _mf_patch
+    if _mf_patch():
+        _metaformer_patch_ok = True
+        logger.info("MetaFormer patching applied for Ludwig stacked_cnn encoder.")
+except Exception as e:
+    logger.warning(f"MetaFormer stacked CNN not available: {e}")
+    _metaformer_patch_ok = False
+
+# Note: CAFormer models are now handled through MetaFormer framework
 
 
 def format_config_table_html(
@@ -432,8 +444,6 @@ def split_data_0_2(
     if not idx_train:
         logger.info("No rows with split=0; nothing to do.")
         return out
-
-    # Always use stratify if possible
     stratify_arr = None
     if label_column and label_column in out.columns:
         label_counts = out.loc[idx_train, label_column].value_counts()
@@ -450,7 +460,6 @@ def split_data_0_2(
             logger.info("Using stratified split for validation set")
         else:
             logger.warning("Only one label class found; cannot stratify")
-
     if validation_size <= 0:
         logger.info("validation_size <= 0; keeping all as train.")
         return out
@@ -458,7 +467,6 @@ def split_data_0_2(
         logger.info("validation_size >= 1; moving all train → validation.")
         out.loc[idx_train, split_column] = 1
         return out
-
     # Always try stratified split first
     try:
         train_idx, val_idx = train_test_split(
@@ -476,7 +484,6 @@ def split_data_0_2(
             random_state=random_state,
             stratify=None,
         )
-
     out.loc[train_idx, split_column] = 0
     out.loc[val_idx, split_column] = 1
     out[split_column] = out[split_column].astype(int)
@@ -626,7 +633,38 @@ class LudwigDirectBackend:
         learning_rate = config_params.get("learning_rate")
         learning_rate = "auto" if learning_rate is None else float(learning_rate)
         raw_encoder = MODEL_ENCODER_TEMPLATES.get(model_name, model_name)
-        if isinstance(raw_encoder, dict):
+
+        # --- MetaFormer detection and config logic ---
+        def _is_metaformer(name: str) -> bool:
+            return isinstance(name, str) and name.startswith(
+                (
+                    "identityformer_",
+                    "randformer_",
+                    "poolformerv2_",
+                    "convformer_",
+                    "caformer_",
+                )
+            )
+
+        if isinstance(raw_encoder, dict) and "custom_model" in raw_encoder and _is_metaformer(raw_encoder["custom_model"]):
+            custom_model = raw_encoder["custom_model"]
+            logger.info(f"DETECTED MetaFormer model: {custom_model}")
+            # Store the MetaFormer model for the patch to use
+            try:
+                from MetaFormer.metaformer_stacked_cnn import set_current_metaformer_model
+                set_current_metaformer_model(custom_model)
+            except ImportError:
+                pass
+            encoder_config = {
+                "type": "stacked_cnn",
+                "height": 224,
+                "width": 224,
+                "num_channels": 3,
+                "output_size": 128,
+                "use_pretrained": use_pretrained,
+                "trainable": trainable,
+            }
+        elif isinstance(raw_encoder, dict):
             encoder_config = {
                 **raw_encoder,
                 "use_pretrained": use_pretrained,
@@ -816,6 +854,12 @@ class LudwigDirectBackend:
     def generate_plots(self, output_dir: Path) -> None:
         """Generate all registered Ludwig visualizations for the latest experiment run."""
         logger.info("Generating all Ludwig visualizations…")
+
+        try:
+            from ludwig.visualize import get_visualizations_registry
+        except Exception as e:
+            logger.warning(f"Visualization dependencies unavailable; skipping plots: {e}")
+            return
 
         test_plots = {
             "compare_performance",
@@ -1149,19 +1193,70 @@ class WorkflowOrchestrator:
             raise
 
     def _extract_images(self) -> None:
-        """Extract images from ZIP into the temp image directory."""
+        """Extract images into the temp image directory.
+        - If a ZIP file is provided, extract it
+        - If a directory is provided, copy its contents
+        """
         if self.image_extract_dir is None:
             raise RuntimeError("Temp image directory not initialized.")
-        logger.info(
-            f"Extracting images from {self.args.image_zip} → {self.image_extract_dir}"
-        )
+        src = Path(self.args.image_zip)
+        logger.info(f"Preparing images from {src} → {self.image_extract_dir}")
         try:
-            with zipfile.ZipFile(self.args.image_zip, "r") as z:
-                z.extractall(self.image_extract_dir)
-            logger.info("Image extraction complete.")
+            if src.is_dir():
+                # copy directory tree
+                for root, dirs, files in os.walk(src):
+                    rel = Path(root).relative_to(src)
+                    target_root = self.image_extract_dir / rel
+                    target_root.mkdir(parents=True, exist_ok=True)
+                    for fn in files:
+                        shutil.copy2(Path(root) / fn, target_root / fn)
+                logger.info("Image directory copied.")
+            else:
+                with zipfile.ZipFile(src, "r") as z:
+                    z.extractall(self.image_extract_dir)
+                logger.info("Image extraction complete.")
         except Exception:
-            logger.error("Error extracting zip file", exc_info=True)
+            logger.error("Error preparing images", exc_info=True)
             raise
+
+    def _process_fixed_split(
+        self, df: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, Dict[str, Any], str]:
+        """Process datasets that already have a split column."""
+        unique = set(df[SPLIT_COLUMN_NAME].unique())
+        
+        if unique == {0, 2}:
+            # Split 0/2 detected, create validation set
+            df = split_data_0_2(
+                df=df,
+                split_column=SPLIT_COLUMN_NAME,
+                validation_size=self.args.validation_size,
+                random_state=self.args.random_seed,
+                label_column=LABEL_COLUMN_NAME,
+            )
+            split_config = {"type": "fixed", "column": SPLIT_COLUMN_NAME}
+            split_info = (
+                "Detected a split column (with values 0 and 2) in the input CSV. "
+                f"Used this column as a base and reassigned "
+                f"{self.args.validation_size * 100:.1f}% "
+                "of the training set (originally labeled 0) to validation (labeled 1) using stratified sampling."
+            )
+            logger.info("Applied custom 0/2 split.")
+        elif unique.issubset({0, 1, 2}):
+            # Standard 0/1/2 split
+            split_config = {"type": "fixed", "column": SPLIT_COLUMN_NAME}
+            split_info = (
+                "Detected a split column with train(0)/validation(1)/test(2) "
+                "values in the input CSV. Used this column as-is."
+            )
+            logger.info("Fixed split column detected.")
+        else:
+            raise ValueError(
+                f"Split column contains unexpected values: {unique}. "
+                "Expected: {{0,1,2}} or {{0,2}}"
+            )
+        
+        return df, split_config, split_info
 
     def _prepare_data(self) -> Tuple[Path, Dict[str, Any], str]:
         """Load CSV, update image paths, handle splits, and write prepared CSV."""
@@ -1248,7 +1343,7 @@ class WorkflowOrchestrator:
                     "Detected a split column (with values 0 and 2) in the input CSV. "
                     f"Used this column as a base and reassigned "
                     f"{self.args.validation_size * 100:.1f}% "
-                    "of the training set (originally labeled 0) to validation (labeled 1) using stratified sampling."
+                    "of the training set (originally labeled 0) to validation (labeled 1)."
                 )
                 logger.info("Applied custom 0/2 split.")
             elif unique.issubset({0, 1, 2}):
@@ -1384,7 +1479,7 @@ def main():
         "--image-zip",
         required=True,
         type=Path,
-        help="Path to the images ZIP",
+        help="Path to the images ZIP or a directory containing images",
     )
     parser.add_argument(
         "--model-name",
@@ -1479,8 +1574,8 @@ def main():
         parser.error("validation-size must be between 0.0 and 1.0")
     if not args.csv_file.is_file():
         parser.error(f"CSV not found: {args.csv_file}")
-    if not args.image_zip.is_file():
-        parser.error(f"ZIP not found: {args.image_zip}")
+    if not (args.image_zip.is_file() or args.image_zip.is_dir()):
+        parser.error(f"ZIP or directory not found: {args.image_zip}")
     if args.augmentation is not None:
         try:
             augmentation_setup = aug_parse(args.augmentation)

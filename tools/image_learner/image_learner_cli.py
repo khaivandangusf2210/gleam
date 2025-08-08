@@ -1224,7 +1224,6 @@ class WorkflowOrchestrator:
     ) -> Tuple[pd.DataFrame, Dict[str, Any], str]:
         """Process datasets that already have a split column."""
         unique = set(df[SPLIT_COLUMN_NAME].unique())
-        
         if unique == {0, 2}:
             # Split 0/2 detected, create validation set
             df = split_data_0_2(
@@ -1255,7 +1254,7 @@ class WorkflowOrchestrator:
                 f"Split column contains unexpected values: {unique}. "
                 "Expected: {{0,1,2}} or {{0,2}}"
             )
-        
+
         return df, split_config, split_info
 
     def _prepare_data(self) -> Tuple[Path, Dict[str, Any], str]:
@@ -1314,49 +1313,6 @@ class WorkflowOrchestrator:
             raise
 
         return final_csv, split_config, split_info
-
-    def _process_fixed_split(
-        self, df: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, Dict[str, Any], str]:
-        """Process a fixed split column (0=train,1=val,2=test)."""
-        logger.info(f"Fixed split column '{SPLIT_COLUMN_NAME}' detected.")
-        try:
-            col = df[SPLIT_COLUMN_NAME]
-            df[SPLIT_COLUMN_NAME] = pd.to_numeric(col, errors="coerce").astype(
-                pd.Int64Dtype()
-            )
-            if df[SPLIT_COLUMN_NAME].isna().any():
-                logger.warning("Split column contains non-numeric/missing values.")
-
-            unique = set(df[SPLIT_COLUMN_NAME].dropna().unique())
-            logger.info(f"Unique split values: {unique}")
-
-            if unique == {0, 2}:
-                df = split_data_0_2(
-                    df,
-                    SPLIT_COLUMN_NAME,
-                    validation_size=self.args.validation_size,
-                    label_column=LABEL_COLUMN_NAME,
-                    random_state=self.args.random_seed,
-                )
-                split_info = (
-                    "Detected a split column (with values 0 and 2) in the input CSV. "
-                    f"Used this column as a base and reassigned "
-                    f"{self.args.validation_size * 100:.1f}% "
-                    "of the training set (originally labeled 0) to validation (labeled 1)."
-                )
-                logger.info("Applied custom 0/2 split.")
-            elif unique.issubset({0, 1, 2}):
-                split_info = "Used user-defined split column from CSV."
-                logger.info("Using fixed split as-is.")
-            else:
-                raise ValueError(f"Unexpected split values: {unique}")
-
-            return df, {"type": "fixed", "column": SPLIT_COLUMN_NAME}, split_info
-
-        except Exception:
-            logger.error("Error processing fixed split", exc_info=True)
-            raise
 
     def _cleanup_temp_dirs(self) -> None:
         if self.temp_dir and self.temp_dir.exists():

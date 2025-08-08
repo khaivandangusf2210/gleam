@@ -4,10 +4,10 @@ ConvFormer and CAFormer.
 Standalone implementation for Galaxy Image Learner tool (no timm dependency).
 """
 from functools import partial
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from torch.nn.init import trunc_normal_  # use torch's built-in truncated normal
 
 
@@ -237,6 +237,7 @@ class SquaredReLU(nn.Module):
     def __init__(self, inplace=False):
         super().__init__()
         self.relu = nn.ReLU(inplace=inplace)
+
     def forward(self, x):
         return torch.square(self.relu(x))
 
@@ -253,6 +254,7 @@ class StarReLU(nn.Module):
                                   requires_grad=scale_learnable)
         self.bias = nn.Parameter(bias_value * torch.ones(1),
                                  requires_grad=bias_learnable)
+
     def forward(self, x):
         return self.scale * self.relu(x) ** 2 + self.bias
 
@@ -296,6 +298,7 @@ class RandomMixing(nn.Module):
         self.random_matrix = nn.parameter.Parameter(
             data=torch.softmax(torch.rand(num_tokens, num_tokens), dim=-1),
             requires_grad=False)
+
     def forward(self, x):
         B, H, W, C = x.shape
         x = x.reshape(B, H * W, C)
@@ -337,6 +340,7 @@ class LayerNormWithoutBias(nn.Module):
             normalized_shape = (normalized_shape,)
         self.weight = nn.Parameter(torch.ones(normalized_shape))
         self.normalized_shape = normalized_shape
+
     def forward(self, x):
         return F.layer_norm(x, self.normalized_shape, weight=self.weight, bias=self.bias, eps=self.eps)
 
@@ -451,13 +455,13 @@ class MetaFormerBlock(nn.Module):
 
 
 DOWNSAMPLE_LAYERS_FOUR_STAGES = [partial(Downsampling,
-            kernel_size=7, stride=4, padding=2,
-            post_norm=partial(LayerNormGeneral, bias=False, eps=1e-6)
-            )] + \
-            [partial(Downsampling,
-                kernel_size=3, stride=2, padding=1,
-                pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True
-            )] * 3
+                                         kernel_size=7, stride=4, padding=2,
+                                         post_norm=partial(LayerNormGeneral, bias=False, eps=1e-6)
+                                         )] + \
+                                [partial(Downsampling,
+                                         kernel_size=3, stride=2, padding=1,
+                                         pre_norm=partial(LayerNormGeneral, bias=False, eps=1e-6), pre_permute=True
+                                         )] * 3
 
 
 class MetaFormer(nn.Module):
@@ -1075,6 +1079,7 @@ def convformer_b36_in21k(pretrained=False, **kwargs):
         model.load_state_dict(state_dict)
     return model
 
+
 @register_model
 def caformer_s18(pretrained=False, **kwargs):
     model = MetaFormer(
@@ -1373,5 +1378,3 @@ def caformer_b36_in21k(pretrained=False, **kwargs):
         state_dict = torch.hub.load_state_dict_from_url(url=model.default_cfg['url'], map_location="cpu", check_hash=True)
         model.load_state_dict(state_dict)
     return model
-
-

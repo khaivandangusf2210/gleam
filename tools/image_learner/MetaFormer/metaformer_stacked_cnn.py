@@ -1,9 +1,10 @@
 import logging
+import os
+import sys
+from typing import Dict, List, Optional
+
 import torch
 import torch.nn as nn
-from typing import Dict, Any, Optional, List
-import sys
-import os
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -19,12 +20,6 @@ SUPPORTED_PREFIXES = (
 
 try:
     from metaformer_models import default_cfgs as META_DEFAULT_CFGS
-    from metaformer_models import (
-        identityformer_s12, identityformer_s24, identityformer_s36, identityformer_m36, identityformer_m48,
-        randformer_s12, randformer_s24, randformer_s36, randformer_m36, randformer_m48,
-        poolformerv2_s12, poolformerv2_s24, poolformerv2_s36, poolformerv2_m36, poolformerv2_m48,
-        convformer_s18, caformer_s18
-    )
     META_MODELS_AVAILABLE = True
     logger.info("MetaFormer models imported successfully")
 except Exception as e:
@@ -68,7 +63,7 @@ class MetaFormerStackedCNN(nn.Module):
         **kwargs,
     ):
         super().__init__()
-        print(f"MetaFormerStackedCNN encoder instantiated")
+        print("MetaFormerStackedCNN encoder instantiated")
         print(f"Using MetaFormer model: {custom_model}")
 
         self.height = height
@@ -131,6 +126,7 @@ class MetaFormerStackedCNN(nn.Module):
             logger.info(f"Loading pretrained weights from: {weights_url}")
         # Ensure we log whenever the factories call torch.hub.load_state_dict_from_url
         orig_loader = getattr(torch.hub, 'load_state_dict_from_url', None)
+
         def _wrapped_loader(url, *args, **kwargs):
             print(f"DOWNLOADING weights from: {url}")
             logger.info(f"DOWNLOADING weights from: {url}")
@@ -258,16 +254,16 @@ def patch_ludwig_direct():
     try:
         from ludwig.encoders.image.base import Stacked2DCNN
         original_stacked_cnn_init = Stacked2DCNN.__init__
-        
+
         # Store custom_model in a global variable during config preparation
-        _metaformer_model = getattr(patch_ludwig_direct, '_metaformer_model', None)
+        getattr(patch_ludwig_direct, '_metaformer_model', None)
 
         def patched_stacked_cnn_init(self, *args, **kwargs):
             custom_model = getattr(patch_ludwig_direct, '_metaformer_model', None)
-            
+
             if _is_supported_metaformer(custom_model):
                 print(f"DETECTED MetaFormer model: {custom_model}")
-                print(f"MetaFormer encoder is being loaded and used.")
+                print("MetaFormer encoder is being loaded and used.")
                 # Initialize base class to keep Ludwig internals intact
                 original_stacked_cnn_init(self, *args, **kwargs)
                 # Create our MetaFormer encoder and graft behavior
@@ -311,5 +307,3 @@ def patch_ludwig_direct():
 def set_current_metaformer_model(model_name: str):
     """Store the current MetaFormer model name for the patch to use."""
     patch_ludwig_direct._metaformer_model = model_name
-
-

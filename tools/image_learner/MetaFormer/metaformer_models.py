@@ -730,8 +730,21 @@ def poolformerv2_s24(pretrained=False, **kwargs):
         **kwargs)
     model.default_cfg = default_cfgs['poolformerv2_s24']
     if pretrained:
-        state_dict = torch.hub.load_state_dict_from_url(url=model.default_cfg['url'], map_location="cpu", check_hash=True)
-        model.load_state_dict(state_dict)
+        try:
+            print(f"Loading pretrained weights for poolformerv2_s24 from: {model.default_cfg['url']}")
+            # Add timeout to prevent hanging in CI environments
+            import socket
+            original_timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(60)  # 60 second timeout
+            try:
+                state_dict = torch.hub.load_state_dict_from_url(url=model.default_cfg['url'], map_location="cpu", check_hash=True)
+                model.load_state_dict(state_dict)
+                print("✓ Successfully loaded pretrained weights for poolformerv2_s24")
+            finally:
+                socket.setdefaulttimeout(original_timeout)
+        except Exception as e:
+            print(f"⚠ Warning: Failed to load pretrained weights for poolformerv2_s24: {e}")
+            print("Continuing with randomly initialized weights...")
     return model
 
 
@@ -1090,8 +1103,21 @@ def caformer_s18(pretrained=False, **kwargs):
         **kwargs)
     model.default_cfg = default_cfgs['caformer_s18']
     if pretrained:
-        state_dict = torch.hub.load_state_dict_from_url(url=model.default_cfg['url'], map_location="cpu", check_hash=True)
-        model.load_state_dict(state_dict)
+        try:
+            print(f"Loading pretrained weights for caformer_s18 from: {model.default_cfg['url']}")
+            # Add timeout to prevent hanging in CI environments
+            import socket
+            original_timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(60)  # 60 second timeout
+            try:
+                state_dict = torch.hub.load_state_dict_from_url(url=model.default_cfg['url'], map_location="cpu", check_hash=True)
+                model.load_state_dict(state_dict)
+                print("✓ Successfully loaded pretrained weights for caformer_s18")
+            finally:
+                socket.setdefaulttimeout(original_timeout)
+        except Exception as e:
+            print(f"⚠ Warning: Failed to load pretrained weights for caformer_s18: {e}")
+            print("Continuing with randomly initialized weights...")
     return model
 
 

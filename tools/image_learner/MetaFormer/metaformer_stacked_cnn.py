@@ -258,6 +258,10 @@ def create_metaformer_stacked_cnn(model_name: str, **kwargs) -> MetaFormerStacke
 
 
 def patch_ludwig_stacked_cnn():
+    # Only patch Ludwig if MetaFormer models are available in this runtime
+    if not META_MODELS_AVAILABLE:
+        logger.warning("MetaFormer models unavailable; skipping Ludwig patch for stacked_cnn.")
+        return False
     return patch_ludwig_direct()
 
 
@@ -276,7 +280,8 @@ def patch_ludwig_direct():
         def patched_stacked_cnn_init(self, *args, **kwargs):
             custom_model = getattr(patch_ludwig_direct, '_metaformer_model', None)
 
-            if _is_supported_metaformer(custom_model):
+            # Intercept only if MetaFormer models are available and requested
+            if META_MODELS_AVAILABLE and _is_supported_metaformer(custom_model):
                 print(f"DETECTED MetaFormer model: {custom_model}")
                 print("MetaFormer encoder is being loaded and used.")
                 # Initialize base class to keep Ludwig internals intact

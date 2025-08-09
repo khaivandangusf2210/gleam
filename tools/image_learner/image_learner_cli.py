@@ -1347,7 +1347,7 @@ class WorkflowOrchestrator:
                     self.args.output_dir,
                     self.args.random_seed,
                 )
-            except Exception as e:
+            except Exception:
                 logger.error("Workflow execution failed", exc_info=True)
                 ran_ok = False
 

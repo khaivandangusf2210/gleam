@@ -1261,8 +1261,9 @@ class WorkflowOrchestrator:
             raise ValueError(f"Missing CSV columns: {', '.join(missing)}")
 
         try:
+            # Use relative paths that Ludwig can resolve from its internal working directory
             df[IMAGE_PATH_COLUMN_NAME] = df[IMAGE_PATH_COLUMN_NAME].apply(
-                lambda p: str((self.image_extract_dir / p).resolve())
+                lambda p: str(Path("images") / p)
             )
         except Exception:
             logger.error("Error updating image paths", exc_info=True)
@@ -1341,6 +1342,7 @@ class WorkflowOrchestrator:
 
             ran_ok = True
             try:
+                # Run Ludwig experiment with absolute paths to avoid working directory issues
                 self.backend.run_experiment(
                     csv_path,
                     config_file,

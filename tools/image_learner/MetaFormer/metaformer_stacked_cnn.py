@@ -241,7 +241,7 @@ class MetaFormerStackedCNN(nn.Module):
                 self.channel_adapter = nn.Conv2d(x.shape[1], 3, kernel_size=1, stride=1, padding=0).to(x.device)
                 logger.info(f"Created dynamic channel adapter: {x.shape[1]} -> 3 channels")
             x = self.channel_adapter(x)
-        
+
         # Handle size adaptation based on configured dimensions
         target_height, target_width = self.height, self.width
         if x.shape[2] != target_height or x.shape[3] != target_width:
@@ -254,14 +254,14 @@ class MetaFormerStackedCNN(nn.Module):
                     self.size_adapter = nn.AdaptiveAvgPool2d((224, 224))
                     logger.info(f"Created size adapter: {x.shape[2]}x{x.shape[3]} -> 224x224")
             x = self.size_adapter(x)
-        
+
         # For MetaFormer models, we need to ensure input is 224x224 for the backbone
         if target_height != 224 or target_width != 224:
             # If target size is not 224x224, we need to resize to 224x224 for the backbone
             backbone_adapter = nn.AdaptiveAvgPool2d((224, 224))
             x = backbone_adapter(x)
-            logger.debug(f"Resized to 224x224 for MetaFormer backbone")
-        
+            logger.debug("Resized to 224x224 for MetaFormer backbone")
+
         features = self.backbone.forward_features(x)
         output = self.fc_layers(features)
         return {'encoder_output': output}

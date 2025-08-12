@@ -664,7 +664,7 @@ class LudwigDirectBackend:
                         height, width = int(dimensions[0]), int(dimensions[1])
                 except (ValueError, IndexError):
                     logger.warning(f"Invalid image resize format: {config_params['image_resize']}, using default 224x224")
-            
+
             encoder_config = {
                 "type": "stacked_cnn",
                 "height": height,
@@ -680,7 +680,7 @@ class LudwigDirectBackend:
             # Resize will be handled at the preprocessing level by Ludwig
             if config_params.get("image_resize") and config_params["image_resize"] != "original":
                 logger.info(f"Resize requested: {config_params['image_resize']} for standard encoder. Resize will be handled at preprocessing level.")
-            
+
             encoder_config = {
                 **raw_encoder,
                 "use_pretrained": use_pretrained,
@@ -717,7 +717,7 @@ class LudwigDirectBackend:
         }
         if config_params.get("augmentation") is not None:
             image_feat["augmentation"] = config_params["augmentation"]
-        
+
         # Add resize configuration for standard encoders (ResNet, etc.)
         if config_params.get("image_resize") and config_params["image_resize"] != "original":
             try:
@@ -1648,7 +1648,7 @@ def main():
         "--image-resize",
         type=str,
         choices=[
-            "original", "96x96", "128x128", "160x160", "192x192", "220x220", 
+            "original", "96x96", "128x128", "160x160", "192x192", "220x220",
             "224x224", "256x256", "299x299", "320x320", "384x384", "448x448", "512x512"
         ],
         default="original",

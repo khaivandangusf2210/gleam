@@ -681,15 +681,16 @@ class LudwigDirectBackend:
 
             encoder_config = {
                 "type": "stacked_cnn",
-                "height": height,
-                "width": width,
+                "height": height,  # User's selected height (not forced to 224)
+                "width": width,    # User's selected width (not forced to 224)
                 "num_channels": 3,
                 "output_size": 128,
                 "use_pretrained": use_pretrained,
                 "trainable": trainable,
             }
 
-            # MetaFormer dimensions are handled at the encoder level
+            # MetaFormer dimensions are now handled at the encoder level with user's choice
+            # No more forced resize to 224x224 - user dimensions are respected completely
         elif isinstance(raw_encoder, dict):
             # Handle image resize for regular encoders
             # Note: Standard encoders like ResNet don't support height/width parameters
@@ -729,13 +730,43 @@ class LudwigDirectBackend:
         image_feat: Dict[str, Any] = {
             "name": IMAGE_PATH_COLUMN_NAME,
             "type": "image",
-            "encoder": encoder_config,
         }
+        # Set preprocessing dimensions FIRST for MetaFormer models
+        if is_metaformer and config_params.get("image_resize") and config_params["image_resize"] != "original":
+            try:
+                dimensions = config_params["image_resize"].split("x")
+                if len(dimensions) == 2:
+                    height, width = int(dimensions[0]), int(dimensions[1])
+
+                    # CRITICAL: Set preprocessing dimensions FIRST for MetaFormer models
+                    # This is essential for MetaFormer models to work properly
+                    if "preprocessing" not in image_feat:
+                        image_feat["preprocessing"] = {}
+                    image_feat["preprocessing"]["height"] = height
+                    image_feat["preprocessing"]["width"] = width
+                    # Use infer_image_dimensions=True to allow Ludwig to read images for validation
+                    # but set explicit max dimensions to control the output size
+                    image_feat["preprocessing"]["infer_image_dimensions"] = True
+                    image_feat["preprocessing"]["infer_image_max_height"] = height
+                    image_feat["preprocessing"]["infer_image_max_width"] = width
+                    image_feat["preprocessing"]["num_channels"] = 3
+                    image_feat["preprocessing"]["resize_method"] = "interpolate"  # Use interpolation for better quality
+                    image_feat["preprocessing"]["standardize_image"] = "imagenet1k"  # Use ImageNet standardization
+                    # Force Ludwig to respect our dimensions by setting additional parameters
+                    image_feat["preprocessing"]["requires_equal_dimensions"] = False
+                    logger.info(f"Set preprocessing dimensions for MetaFormer: {height}x{width} (infer_dimensions=True with max dimensions to allow validation)")
+            except (ValueError, IndexError):
+                logger.warning(f"Invalid image resize format: {config_params['image_resize']}, skipping preprocessing setup")
+        # Now set the encoder configuration
+        image_feat["encoder"] = encoder_config
+
         if config_params.get("augmentation") is not None:
             image_feat["augmentation"] = config_params["augmentation"]
 
         # Add resize configuration for standard encoders (ResNet, etc.)
-        # Note: MetaFormer models handle resize at the encoder level, not preprocessing
+        # FIXED: MetaFormer models now respect user dimensions completely
+        # Previously there was a double resize issue where MetaFormer would force 224x224
+        # Now both MetaFormer and standard encoders respect user's resize choice
         if config_params.get("image_resize") and config_params["image_resize"] != "original":
             try:
                 dimensions = config_params["image_resize"].split("x")
@@ -743,22 +774,34 @@ class LudwigDirectBackend:
                     height, width = int(dimensions[0]), int(dimensions[1])
 
                     if is_metaformer:
-                        # For MetaFormer models, resize is already handled at encoder level
+                        # For MetaFormer models, resize is handled at encoder level
                         logger.info(f"MetaFormer resize handled at encoder level: {height}x{width}")
 
-                        # For MetaFormer models, DO NOT set preprocessing dimensions
-                        # The encoder-level dimensions are sufficient and setting preprocessing
-                        # dimensions can cause conflicts with Ludwig's internal logic
-                        logger.info("MetaFormer models use encoder-level dimensions only - no preprocessing resize needed")
+                        # Preprocessing is already set above for MetaFormer models
+                        # No need to set it again here
+                        logger.info("MetaFormer preprocessing already configured above")
+                        # Also ensure the encoder has the correct dimensions
+                        if "encoder" not in image_feat:
+                            image_feat["encoder"] = {}
+                        image_feat["encoder"]["height"] = height
+                        image_feat["encoder"]["width"] = width
+                        image_feat["encoder"]["num_channels"] = 3
+                        logger.info(f"Ensured MetaFormer encoder dimensions: {height}x{width}")
+
+                        # MetaFormer preprocessing is complete, skip standard encoder logic
+                        pass
                     else:
                         # Add resize to preprocessing for standard encoders
                         if "preprocessing" not in image_feat:
                             image_feat["preprocessing"] = {}
                         image_feat["preprocessing"]["height"] = height
                         image_feat["preprocessing"]["width"] = width
-                        # Set infer_image_dimensions to False to ensure Ludwig respects our dimensions
-                        image_feat["preprocessing"]["infer_image_dimensions"] = False
-                        logger.info(f"Added resize preprocessing: {height}x{width} for standard encoder with infer_image_dimensions=False")
+                        # Use infer_image_dimensions=True to allow Ludwig to read images for validation
+                        # but set explicit max dimensions to control the output size
+                        image_feat["preprocessing"]["infer_image_dimensions"] = True
+                        image_feat["preprocessing"]["infer_image_max_height"] = height
+                        image_feat["preprocessing"]["infer_image_max_width"] = width
+                        logger.info(f"Added resize preprocessing: {height}x{width} for standard encoder with infer_image_dimensions=True and max dimensions")
             except (ValueError, IndexError):
                 logger.warning(f"Invalid image resize format: {config_params['image_resize']}, skipping resize preprocessing")
 
@@ -917,6 +960,12 @@ class LudwigDirectBackend:
 
         try:
             from ludwig.visualize import get_visualizations_registry
+        except ImportError as e:
+            if "ptitprince" in str(e):
+                logger.warning("Visualization dependencies unavailable; skipping plots: ptitprince module not found. Install with: pip install ptitprince")
+            else:
+                logger.warning(f"Visualization dependencies unavailable; skipping plots: {e}")
+            return
         except Exception as e:
             logger.warning(f"Visualization dependencies unavailable; skipping plots: {e}")
             return

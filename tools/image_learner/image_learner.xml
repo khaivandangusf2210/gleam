@@ -1,0 +1,484 @@
+<tool id="image_learner" name="Image Learner" version="0.1.1" profile="22.05">
+    <description>trains and evaluates an image classification/regression model</description>
+    <requirements>
+        <container type="docker">quay.io/goeckslab/galaxy-ludwig-gpu:0.10.1</container>
+    </requirements>
+    <required_files>
+        <include path="utils.py" />
+        <include path="constants.py" />
+        <include path="image_learner_cli.py" />
+
+        <include path="MetaFormer/metaformer_models.py" />
+        <include path="MetaFormer/metaformer_stacked_cnn.py" />
+        <include path="MetaFormer/__init__.py" />
+    </required_files>
+    <stdio>
+        <exit_code range="137" level="fatal_oom" description="Out of Memory" />
+        <exit_code range="1:" level="fatal" description="Error occurred. Please check Tool Standard Error" />
+    </stdio>
+    <command>
+        <![CDATA[
+            #import re
+            #if $input_csv
+            #set $sanitized_input_csv = re.sub('[^\w\-_\.]', '_', $input_csv.element_identifier.strip())
+            ln -sf '$input_csv' "./${sanitized_input_csv}";
+            #end if
+
+            python '$__tool_directory__/image_learner_cli.py'
+                --csv-file "./${sanitized_input_csv}"
+                --image-zip "$image_zip"
+                --model-name "$model_name"
+                #if $use_pretrained == "true"
+                    --use-pretrained
+                    #if $fine_tune == "true"
+                        --fine-tune
+                    #end if
+                #end if
+                #if $customize_defaults == "true"
+                    #if $epochs
+                        --epochs "$epochs"
+                    #end if
+                    #if $early_stop
+                        --early-stop "$early_stop"
+                    #end if
+                    #if $learning_rate_define == "true"
+                        --learning-rate "$learning_rate"
+                    #end if
+                    #if $batch_size_define == "true"
+                        --batch-size "$batch_size"
+                    #end if
+                    --split-probabilities "$train_split" "$val_split" "$test_split"
+                #end if
+                #if $augmentation
+                    --augmentation "$augmentation"
+                #end if
+                #if $image_resize != "original"
+                    --image-resize "$image_resize"
+                #end if
+                --random-seed "$random_seed"
+                --output-dir "." &&
+
+            mkdir -p '$output_model.extra_files_path' &&
+            cp -r experiment_run/model/*.json experiment_run/model/model_weights '$output_model.extra_files_path' &&
+
+            echo "Image Learner Classification Experiment is Done!"
+        ]]>
+    </command>
+
+    <inputs>
+        <param name="input_csv" argument="input_csv" type="data" format="csv" optional="false" label="the metadata csv containing image_path column, label column and optional split column" />
+        <param name="image_zip" type="data" format="zip" optional="false" label="Image zip" help="Image zip file containing your image data"/>
+        <param name="model_name" type="select" optional="false" label="Select a model for your experiment" >
+
+            <option value="resnet18">Resnet18</option>
+            <option value="resnet34">Resnet34</option>
+            <option value="resnet50">Resnet50</option>
+            <option value="resnet101">Resnet101</option>
+            <option value="resnet152">Resnet152</option>
+            <option value="resnext50_32x4d">Resnext50_32x4d</option>
+            <option value="resnext101_32x8d">Resnext101_32x8d</option>
+            <option value="resnext101_64x4d">Resnext101_64x4d</option>
+            <option value="resnext152_32x8d">Resnext152_32x8d</option>
+            <option value="wide_resnet50_2">Wide_resnet50_2</option>
+            <option value="wide_resnet101_2">Wide_resnet101_2</option>
+            <option value="wide_resnet103_2">Wide_resnet103_2</option>
+            <option value="efficientnet_b0">Efficientnet_b0</option>
+            <option value="efficientnet_b1">Efficientnet_b1</option>
+            <option value="efficientnet_b2">Efficientnet_b2</option>
+            <option value="efficientnet_b3">Efficientnet_b3</option>
+            <option value="efficientnet_b4">Efficientnet_b4</option>
+            <option value="efficientnet_b5">Efficientnet_b5</option>
+            <option value="efficientnet_b6">Efficientnet_b6</option>
+            <option value="efficientnet_b7">Efficientnet_b7</option>
+            <option value="efficientnet_v2_s">Efficientnet_v2_s</option>
+            <option value="efficientnet_v2_m">Efficientnet_v2_m</option>
+            <option value="efficientnet_v2_l">Efficientnet_v2_l</option>
+            <option value="regnet_y_400mf">Regnet_y_400mf</option>
+            <option value="regnet_y_800mf">Regnet_y_800mf</option>
+            <option value="regnet_y_1_6gf">Regnet_y_1_6gf</option>
+            <option value="regnet_y_3_2gf">Regnet_y_3_2gf</option>
+            <option value="regnet_y_8gf">Regnet_y_8gf</option>
+            <option value="regnet_y_16gf">Regnet_y_16gf</option>
+            <option value="regnet_y_32gf">Regnet_y_32gf</option>
+            <option value="regnet_y_128gf">Regnet_y_128gf</option>
+            <option value="regnet_x_400mf">Regnet_x_400mf</option>
+            <option value="regnet_x_800mf">Regnet_x_800mf</option>
+            <option value="regnet_x_1_6gf">Regnet_x_1_6gf</option>
+            <option value="regnet_x_3_2gf">Regnet_x_3_2gf</option>
+            <option value="regnet_x_8gf">Regnet_x_8gf</option>
+            <option value="regnet_x_16gf">Regnet_x_16gf</option>
+            <option value="regnet_x_32gf">Regnet_x_32gf</option>
+            <option value="vgg11">Vgg11</option>
+            <option value="vgg11_bn">Vgg11_bn</option>
+            <option value="vgg13">Vgg13</option>
+            <option value="vgg13_bn">Vgg13_bn</option>
+            <option value="vgg16">Vgg16</option>
+            <option value="vgg16_bn">Vgg16_bn</option>
+            <option value="vgg19">Vgg19</option>
+            <option value="vgg19_bn">Vgg19_bn</option>
+            <option value="shufflenet_v2_x0_5">Shufflenet_v2_x0_5</option>
+            <option value="shufflenet_v2_x1_0">Shufflenet_v2_x1_0</option>
+            <option value="shufflenet_v2_x1_5">Shufflenet_v2_x1_5</option>
+            <option value="shufflenet_v2_x2_0">Shufflenet_v2_x2_0</option>
+            <option value="squeezenet1_0">Squeezenet1_0</option>
+            <option value="squeezenet1_1">Squeezenet1_1</option>
+            <option value="swin_t">Swin_t</option>
+            <option value="swin_s">Swin_s</option>
+            <option value="swin_b">Swin_b</option>
+            <option value="swin_v2_t">Swin_v2_t</option>
+            <option value="swin_v2_s">Swin_v2_s</option>
+            <option value="swin_v2_b">Swin_v2_b</option>
+            <option value="vit_b_16">Vit_b_16</option>
+            <option value="vit_b_32">Vit_b_32</option>
+            <option value="vit_l_16">Vit_l_16</option>
+            <option value="vit_l_32">Vit_l_32</option>
+            <option value="vit_h_14">Vit_h_14</option>
+            <option value="convnext_tiny">Convnext_tiny</option>
+            <option value="convnext_small">Convnext_small</option>
+            <option value="convnext_base">Convnext_base</option>
+            <option value="convnext_large">Convnext_large</option>
+            <option value="maxvit_t">Maxvit_t</option>
+            <option value="alexnet">Alexnet</option>
+            <option value="googlenet">Googlenet</option>
+            <option value="inception_v3">Inception_v3</option>
+            <option value="mobilenet_v2">Mobilenet_v2</option>
+            <option value="mobilenet_v3_large">Mobilenet_v3_large</option>
+            <option value="mobilenet_v3_small">Mobilenet_v3_small</option>
+            <!-- MetaFormer Models -->
+            <option value="identityformer_s12">IdentityFormer S12</option>
+            <option value="identityformer_s24">IdentityFormer S24</option>
+            <option value="identityformer_s36">IdentityFormer S36</option>
+            <option value="identityformer_m36">IdentityFormer M36</option>
+            <option value="identityformer_m48">IdentityFormer M48</option>
+            <option value="randformer_s12">RandFormer S12</option>
+            <option value="randformer_s24">RandFormer S24</option>
+            <option value="randformer_s36">RandFormer S36</option>
+            <option value="randformer_m36">RandFormer M36</option>
+            <option value="randformer_m48">RandFormer M48</option>
+            <option value="poolformerv2_s12">PoolFormerV2 S12</option>
+            <option value="poolformerv2_s24">PoolFormerV2 S24</option>
+            <option value="poolformerv2_s36">PoolFormerV2 S36</option>
+            <option value="poolformerv2_m36">PoolFormerV2 M36</option>
+            <option value="poolformerv2_m48">PoolFormerV2 M48</option>
+            <option value="convformer_s18">ConvFormer S18</option>
+            <option value="convformer_s18_384">ConvFormer S18 384</option>
+            <option value="convformer_s18_in21ft1k">ConvFormer S18 ImageNet21k</option>
+            <option value="convformer_s18_384_in21ft1k">ConvFormer S18 384 ImageNet21k</option>
+            <option value="convformer_s18_in21k">ConvFormer S18 ImageNet21k Pretrained</option>
+            <option value="convformer_s36">ConvFormer S36</option>
+            <option value="convformer_s36_384">ConvFormer S36 384</option>
+            <option value="convformer_s36_in21ft1k">ConvFormer S36 ImageNet21k</option>
+            <option value="convformer_s36_384_in21ft1k">ConvFormer S36 384 ImageNet21k</option>
+            <option value="convformer_s36_in21k">ConvFormer S36 ImageNet21k Pretrained</option>
+            <option value="convformer_m36">ConvFormer M36</option>
+            <option value="convformer_m36_384">ConvFormer M36 384</option>
+            <option value="convformer_m36_in21ft1k">ConvFormer M36 ImageNet21k</option>
+            <option value="convformer_m36_384_in21ft1k">ConvFormer M36 384 ImageNet21k</option>
+            <option value="convformer_m36_in21k">ConvFormer M36 ImageNet21k Pretrained</option>
+            <option value="convformer_b36">ConvFormer B36</option>
+            <option value="convformer_b36_384">ConvFormer B36 384</option>
+            <option value="convformer_b36_in21ft1k">ConvFormer B36 ImageNet21k</option>
+            <option value="convformer_b36_384_in21ft1k">ConvFormer B36 384 ImageNet21k</option>
+            <option value="convformer_b36_in21k">ConvFormer B36 ImageNet21k Pretrained</option>
+            <option value="caformer_s18">CAFormer S18</option>
+            <option value="caformer_s18_384">CAFormer S18 384</option>
+            <option value="caformer_s18_in21ft1k">CAFormer S18 ImageNet21k</option>
+            <option value="caformer_s18_384_in21ft1k">CAFormer S18 384 ImageNet21k</option>
+            <option value="caformer_s18_in21k">CAFormer S18 ImageNet21k Pretrained</option>
+            <option value="caformer_s36">CAFormer S36</option>
+            <option value="caformer_s36_384">CAFormer S36 384</option>
+            <option value="caformer_s36_in21ft1k">CAFormer S36 ImageNet21k</option>
+            <option value="caformer_s36_384_in21ft1k">CAFormer S36 384 ImageNet21k</option>
+            <option value="caformer_s36_in21k">CAFormer S36 ImageNet21k Pretrained</option>
+            <option value="caformer_m36">CAFormer M36</option>
+            <option value="caformer_m36_384">CAFormer M36 384</option>
+            <option value="caformer_m36_in21ft1k">CAFormer M36 ImageNet21k</option>
+            <option value="caformer_m36_384_in21ft1k">CAFormer M36 384 ImageNet21k</option>
+            <option value="caformer_m36_in21k">CAFormer M36 ImageNet21k Pretrained</option>
+            <option value="caformer_b36">CAFormer B36</option>
+            <option value="caformer_b36_384">CAFormer B36 384</option>
+            <option value="caformer_b36_in21ft1k">CAFormer B36 ImageNet21k</option>
+            <option value="caformer_b36_384_in21ft1k">CAFormer B36 384 ImageNet21k</option>
+            <option value="caformer_b36_in21k">CAFormer B36 ImageNet21k Pretrained</option>
+        </param>
+
+        <conditional name="scratch_fine_tune">
+            <param name="use_pretrained" type="select"
+                label="Use pretrained weights?"
+                help="If select no, the encoder, combiner, and decoder will all be initialized and trained from scratch. (e.g. when your images are very different from ImageNet or no suitable pretrained model exists.)">
+                <option value="false">No</option>
+                <option value="true" selected="true">Yes</option>
+            </param>
+            <when value="true">
+                <param name="fine_tune" type="select" label="Fine tune the encoder?"
+                    help="Whether to fine tune the encoder(combiner and decoder will be fine-tued anyway)" >
+                    <option value="false" >No</option>
+                    <option value="true" selected="true">Yes</option>
+                </param>
+            </when>
+            <when value="false">
+                <!-- No additional parameters to show if the user selects 'No' -->
+            </when>
+        </conditional>
+        <param argument="image_resize"
+               name="image_resize"
+               type="select"
+               label="Image Resize"
+               help="Select the size to resize images to. Original size keeps images as-is, while other options resize all images to the specified dimensions.">
+            <option value="original" selected="true">Original Size (No Resize)</option>
+            <option value="96x96">96x96</option>
+            <option value="128x128">128x128</option>
+            <option value="160x160">160x160</option>
+            <option value="192x192">192x192</option>
+            <option value="220x220">220x220</option>
+            <option value="224x224">224x224</option>
+            <option value="256x256">256x256</option>
+            <option value="299x299">299x299</option>
+            <option value="320x320">320x320</option>
+            <option value="384x384">384x384</option>
+            <option value="448x448">448x448</option>
+            <option value="512x512">512x512</option>
+        </param>
+        <param argument="augmentation"
+               name="augmentation"
+               type="select"
+               multiple="true"
+               display="checkboxes"
+               label="Image Augmentation"
+               help="Pick any combination of augmentations to apply">
+            <option value="random_horizontal_flip">Random Horizontal Flip</option>
+            <option value="random_vertical_flip">Random Vertical Flip</option>
+            <option value="random_rotate">Random Rotate</option>
+            <option value="random_blur">Random Blur</option>
+            <option value="random_brightness">Random Brightness</option>
+            <option value="random_contrast">Random Contrast</option>
+        </param>
+        <param argument="random_seed" type="integer" value="42" optional="true" label="Random seed (set for reproducibility)" min="0" max="999999"/>
+        <conditional name="advanced_settings">
+            <param name="customize_defaults" type="select" label="Customize Default Settings?" help="Select yes if you want to customize the default settings of the experiment.">
+                <option value="false" selected="true">No</option>
+                <option value="true">Yes</option>
+            </param>
+            <when value="true">
+                <param name="epochs" type="integer" value="10" min="1" max="99999" label="Epochs" help="Total number of full passes through the training dataset. Higher values may improve accuracy but increase training time. Default: 10." />
+                <param name="early_stop" type="integer" value="5" min="1" max="99999" label="Early Stop" help="Number of epochs with no improvement after which training will be stopped. Default: 5." />
+                <conditional name="learning_rate_condition">
+                    <param name="learning_rate_define" type="select" label="Define an initial learning rate?" help="Want to change the initial learning rate from default to a number? See ludwig.ai for more info. Default: No" >
+                        <option value="false" selected="true" >No</option>
+                        <option value="true">Yes</option>
+                    </param>
+                    <when value="true">
+                        <param name="learning_rate" type="float" value="0.001" min="0.0001" max="1.0" label="Learning Rate" help="Initial learning rate for the optimizer. Default: 0.001." />
+                    </when>
+                    <when value="false">
+                        <!-- No additional parameters to show if the user selects 'No' -->
+                    </when>
+                </conditional>
+                <conditional name="batch_size_condition">
+                    <param name="batch_size_define" type="select" label="Define your batch size?" help="Want to change the batch size from auto to a number? See ludwig.ai for more info. Default: No" >
+                        <option value="false" selected="true" >No</option>
+                        <option value="true">Yes</option>
+                    </param>
+                    <when value="true">
+                        <param name="batch_size" type="integer" value="32" min="1" max="99999" label="Batch Size" help="Number of samples per gradient update. Default: 32." />
+                    </when>
+                    <when value="false">
+                        <!-- No additional parameters to show if the user selects 'No' -->
+                    </when>
+                </conditional>
+                <param name="train_split" type="float"
+                        label="Training split proportion (only works if no split column in the metadata csv)"
+                        value="0.7"
+                        help="Fraction of data for training (e.g., 0.7). train split + val split + test split should = 1"/>
+                <param name="val_split"   type="float"
+                        label="Validation split proportion (only works if no split column in the metadata csv)"
+                        value="0.1"
+                        help="Fraction of data for validation (e.g., 0.1). train split + val split + test split should = 1"/>
+                <param name="test_split"  type="float"
+                        label="Test split proportion (only works if no split column in the metadata csv)"
+                        value="0.2"
+                        help="Fraction of data for testing (e.g., 0.2) train split + val split + test split should = 1."/>
+            </when>
+            <when value="false">
+                <!-- No additional parameters to show if the user selects 'No' -->
+            </when>
+        </conditional>
+    </inputs>
+    <outputs>
+        <data format="ludwig_model" name="output_model" label="${tool.name} trained model on ${on_string}" />
+        <data format="html" name="output_report" from_work_dir="image_classification_results_report.html" label="${tool.name} report on ${on_string}" />
+        <collection type="list" name="output_pred_csv" label="${tool.name} predictions CSVs/experiment stats/plots on ${on_string}" >
+            <discover_datasets pattern="(?P&lt;designation&gt;predictions\.csv)" format="csv" directory="experiment_run" />
+            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.json" format="json" directory="experiment_run" />
+            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.png" format="png" directory="experiment_run/visualizations/train" />
+            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.png" format="png" directory="experiment_run/visualizations/test" />
+        </collection>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="resnet18" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+         <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="vit_b_16" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="resnet18" />
+            <param name="augmentation" value="random_horizontal_flip,random_vertical_flip,random_rotate" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="utkface_labels.csv" ftype="csv" />
+            <param name="image_zip" value="age_regression.zip" ftype="zip" />
+            <param name="model_name" value="resnet18" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+            <output name="output_report" file="expected_regression.html" compare="sim_size"/>
+
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="caformer_s18" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="poolformerv2_s24" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+
+    </tests>
+    <help>
+        <![CDATA[
+**What it does**
+Image Learner for Classification/regression: trains and evaluates a image classification/regression model. 
+It uses the metadata csv to find the image paths and labels. 
+The metadata csv should contain a column with the name 'image_path' and a column with the name 'label'.
+Optionally, you can also add a column with the name 'split' to specify which split each row belongs to (train, val, test). 
+If you do not provide a split column, the tool will automatically split the data into train, val, and test sets based on the proportions you specify or [0.7, 0.1, 0.2] by default.
+
+**Models Available**
+This tool supports a wide range of state-of-the-art image classification models including:
+- Traditional CNNs (ResNet, EfficientNet, VGG, etc.)
+- Vision Transformers (ViT, Swin Transformer)
+- Modern architectures (ConvNeXt, MaxViT)
+- MetaFormer family models (IdentityFormer, RandFormer, PoolFormerV2, ConvFormer, CAFormer)
+
+**MetaFormer Models**
+The MetaFormer family represents a unified perspective on transformer-like architectures. These models demonstrate that the success of transformers is largely due to their general architecture rather than specific components like attention mechanisms. All MetaFormer models use pretrained weights from Hugging Face and provide explicit confirmation of weight loading.
+
+**If the selected label column has more than 10 unique values, the tool will automatically treat the task as a regression problem and apply appropriate metrics (e.g., MSE, RMSE, R²).**
+
+
+**Outputs**
+The tool will output a trained model in the form of a ludwig_model file,
+a report in the form of an HTML file, and a collection of CSV/json/png files containing the predictions, experiment stats and visualizations.
+The html report will contain metrics&experiment setup parameters, train&val plots and test plots.
+
+        ]]>
+    </help>
+    <citations>
+            <citation type="bibtex">
+@misc{https://doi.org/10.48550/arxiv.1909.07930,
+    doi = {10.48550/ARXIV.1909.07930},
+    url = {https://arxiv.org/abs/1909.07930},
+    author = {Molino, Piero and Dudin, Yaroslav and Miryala, Sai Sumanth},
+    title = {Ludwig: a type-based declarative deep learning toolbox},
+    publisher = {arXiv},
+    year = {2019},
+    copyright = {arXiv.org perpetual, non-exclusive license}
+}
+            </citation>
+        </citations>
+</tool>

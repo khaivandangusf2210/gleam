@@ -646,8 +646,20 @@ class LudwigDirectBackend:
                 )
             )
 
-        if isinstance(raw_encoder, dict) and "custom_model" in raw_encoder and _is_metaformer(raw_encoder["custom_model"]):
-            custom_model = raw_encoder["custom_model"]
+        # Check if this is a MetaFormer model (either direct name or in custom_model)
+        is_metaformer = (
+            _is_metaformer(model_name) or 
+            (isinstance(raw_encoder, dict) and "custom_model" in raw_encoder and _is_metaformer(raw_encoder["custom_model"]))
+        )
+
+        if is_metaformer:
+            # Handle MetaFormer models
+            custom_model = None
+            if isinstance(raw_encoder, dict) and "custom_model" in raw_encoder:
+                custom_model = raw_encoder["custom_model"]
+            else:
+                custom_model = model_name
+            
             logger.info(f"DETECTED MetaFormer model: {custom_model}")
             # Store the MetaFormer model for the patch to use
             try:
@@ -655,6 +667,7 @@ class LudwigDirectBackend:
                 set_current_metaformer_model(custom_model)
             except ImportError:
                 pass
+            
             # Parse image resize dimensions
             height, width = 224, 224  # Default for MetaFormer models
             if config_params.get("image_resize") and config_params["image_resize"] != "original":
@@ -662,6 +675,7 @@ class LudwigDirectBackend:
                     dimensions = config_params["image_resize"].split("x")
                     if len(dimensions) == 2:
                         height, width = int(dimensions[0]), int(dimensions[1])
+                        logger.info(f"MetaFormer resize: {height}x{width}")
                 except (ValueError, IndexError):
                     logger.warning(f"Invalid image resize format: {config_params['image_resize']}, using default 224x224")
 
@@ -674,6 +688,9 @@ class LudwigDirectBackend:
                 "use_pretrained": use_pretrained,
                 "trainable": trainable,
             }
+            
+            # Store MetaFormer dimensions for later use in preprocessing
+            metaformer_dimensions = {"height": height, "width": width}
         elif isinstance(raw_encoder, dict):
             # Handle image resize for regular encoders
             # Note: Standard encoders like ResNet don't support height/width parameters
@@ -688,6 +705,7 @@ class LudwigDirectBackend:
             }
         else:
             encoder_config = {"type": raw_encoder}
+            metaformer_dimensions = None
 
         batch_size_cfg = batch_size or "auto"
 
@@ -719,17 +737,30 @@ class LudwigDirectBackend:
             image_feat["augmentation"] = config_params["augmentation"]
 
         # Add resize configuration for standard encoders (ResNet, etc.)
+        # Note: MetaFormer models handle resize at the encoder level, not preprocessing
         if config_params.get("image_resize") and config_params["image_resize"] != "original":
             try:
                 dimensions = config_params["image_resize"].split("x")
                 if len(dimensions) == 2:
                     height, width = int(dimensions[0]), int(dimensions[1])
-                    # Add resize to preprocessing for standard encoders
-                    if "preprocessing" not in image_feat:
-                        image_feat["preprocessing"] = {}
-                    image_feat["preprocessing"]["height"] = height
-                    image_feat["preprocessing"]["width"] = width
-                    logger.info(f"Added resize preprocessing: {height}x{width} for standard encoder")
+                    
+                    if is_metaformer:
+                        # For MetaFormer models, resize is already handled at encoder level
+                        logger.info(f"MetaFormer resize handled at encoder level: {height}x{width}")
+                        
+                        # For MetaFormer models, DO NOT set preprocessing dimensions
+                        # The encoder-level dimensions are sufficient and setting preprocessing
+                        # dimensions can cause conflicts with Ludwig's internal logic
+                        logger.info(f"MetaFormer models use encoder-level dimensions only - no preprocessing resize needed")
+                    else:
+                        # Add resize to preprocessing for standard encoders
+                        if "preprocessing" not in image_feat:
+                            image_feat["preprocessing"] = {}
+                        image_feat["preprocessing"]["height"] = height
+                        image_feat["preprocessing"]["width"] = width
+                        # Set infer_image_dimensions to False to ensure Ludwig respects our dimensions
+                        image_feat["preprocessing"]["infer_image_dimensions"] = False
+                        logger.info(f"Added resize preprocessing: {height}x{width} for standard encoder with infer_image_dimensions=False")
             except (ValueError, IndexError):
                 logger.warning(f"Invalid image resize format: {config_params['image_resize']}, skipping resize preprocessing")
 

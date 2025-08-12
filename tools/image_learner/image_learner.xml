@@ -52,6 +52,9 @@
                 #if $augmentation
                     --augmentation "$augmentation"
                 #end if
+                #if $image_resize != "original"
+                    --image-resize "$image_resize"
+                #end if
                 --random-seed "$random_seed"
                 --output-dir "." &&
 
@@ -217,6 +220,25 @@
                 <!-- No additional parameters to show if the user selects 'No' -->
             </when>
         </conditional>
+        <param argument="image_resize"
+               name="image_resize"
+               type="select"
+               label="Image Resize"
+               help="Select the size to resize images to. Original size keeps images as-is, while other options resize all images to the specified dimensions.">
+            <option value="original" selected="true">Original Size (No Resize)</option>
+            <option value="96x96">96x96</option>
+            <option value="128x128">128x128</option>
+            <option value="160x160">160x160</option>
+            <option value="192x192">192x192</option>
+            <option value="220x220">220x220</option>
+            <option value="224x224">224x224</option>
+            <option value="256x256">256x256</option>
+            <option value="299x299">299x299</option>
+            <option value="320x320">320x320</option>
+            <option value="384x384">384x384</option>
+            <option value="448x448">448x448</option>
+            <option value="512x512">512x512</option>
+        </param>
         <param argument="augmentation"
                name="augmentation"
                type="select"

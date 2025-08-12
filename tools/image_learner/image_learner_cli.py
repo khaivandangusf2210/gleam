@@ -655,16 +655,32 @@ class LudwigDirectBackend:
                 set_current_metaformer_model(custom_model)
             except ImportError:
                 pass
+            # Parse image resize dimensions
+            height, width = 224, 224  # Default for MetaFormer models
+            if config_params.get("image_resize") and config_params["image_resize"] != "original":
+                try:
+                    dimensions = config_params["image_resize"].split("x")
+                    if len(dimensions) == 2:
+                        height, width = int(dimensions[0]), int(dimensions[1])
+                except (ValueError, IndexError):
+                    logger.warning(f"Invalid image resize format: {config_params['image_resize']}, using default 224x224")
+            
             encoder_config = {
                 "type": "stacked_cnn",
-                "height": 224,
-                "width": 224,
+                "height": height,
+                "width": width,
                 "num_channels": 3,
                 "output_size": 128,
                 "use_pretrained": use_pretrained,
                 "trainable": trainable,
             }
         elif isinstance(raw_encoder, dict):
+            # Handle image resize for regular encoders
+            # Note: Standard encoders like ResNet don't support height/width parameters
+            # Resize will be handled at the preprocessing level by Ludwig
+            if config_params.get("image_resize") and config_params["image_resize"] != "original":
+                logger.info(f"Resize requested: {config_params['image_resize']} for standard encoder. Resize will be handled at preprocessing level.")
+            
             encoder_config = {
                 **raw_encoder,
                 "use_pretrained": use_pretrained,
@@ -701,6 +717,21 @@ class LudwigDirectBackend:
         }
         if config_params.get("augmentation") is not None:
             image_feat["augmentation"] = config_params["augmentation"]
+        
+        # Add resize configuration for standard encoders (ResNet, etc.)
+        if config_params.get("image_resize") and config_params["image_resize"] != "original":
+            try:
+                dimensions = config_params["image_resize"].split("x")
+                if len(dimensions) == 2:
+                    height, width = int(dimensions[0]), int(dimensions[1])
+                    # Add resize to preprocessing for standard encoders
+                    if "preprocessing" not in image_feat:
+                        image_feat["preprocessing"] = {}
+                    image_feat["preprocessing"]["height"] = height
+                    image_feat["preprocessing"]["width"] = width
+                    logger.info(f"Added resize preprocessing: {height}x{width} for standard encoder")
+            except (ValueError, IndexError):
+                logger.warning(f"Invalid image resize format: {config_params['image_resize']}, skipping resize preprocessing")
 
         if task_type == "regression":
             output_feat = {
@@ -1333,6 +1364,7 @@ class WorkflowOrchestrator:
                 "early_stop": self.args.early_stop,
                 "label_column_data_path": csv_path,
                 "augmentation": self.args.augmentation,
+                "image_resize": self.args.image_resize,
             }
             yaml_str = self.backend.prepare_config(backend_args, split_cfg)
 
@@ -1611,6 +1643,16 @@ def main():
             "random_blur, random_brightness, random_contrast. "
             "E.g. --augmentation random_horizontal_flip,random_rotate"
         ),
+    )
+    parser.add_argument(
+        "--image-resize",
+        type=str,
+        choices=[
+            "original", "96x96", "128x128", "160x160", "192x192", "220x220", 
+            "224x224", "256x256", "299x299", "320x320", "384x384", "448x448", "512x512"
+        ],
+        default="original",
+        help="Image resize option. 'original' keeps images as-is, other options resize to specified dimensions.",
     )
 
     args = parser.parse_args()

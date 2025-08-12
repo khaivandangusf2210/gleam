@@ -648,8 +648,8 @@ class LudwigDirectBackend:
 
         # Check if this is a MetaFormer model (either direct name or in custom_model)
         is_metaformer = (
-            _is_metaformer(model_name) or 
-            (isinstance(raw_encoder, dict) and "custom_model" in raw_encoder and _is_metaformer(raw_encoder["custom_model"]))
+            _is_metaformer(model_name)
+            or (isinstance(raw_encoder, dict) and "custom_model" in raw_encoder and _is_metaformer(raw_encoder["custom_model"]))
         )
 
         if is_metaformer:
@@ -659,7 +659,7 @@ class LudwigDirectBackend:
                 custom_model = raw_encoder["custom_model"]
             else:
                 custom_model = model_name
-            
+
             logger.info(f"DETECTED MetaFormer model: {custom_model}")
             # Store the MetaFormer model for the patch to use
             try:
@@ -667,7 +667,7 @@ class LudwigDirectBackend:
                 set_current_metaformer_model(custom_model)
             except ImportError:
                 pass
-            
+
             # Parse image resize dimensions
             height, width = 224, 224  # Default for MetaFormer models
             if config_params.get("image_resize") and config_params["image_resize"] != "original":
@@ -688,9 +688,8 @@ class LudwigDirectBackend:
                 "use_pretrained": use_pretrained,
                 "trainable": trainable,
             }
-            
-            # Store MetaFormer dimensions for later use in preprocessing
-            metaformer_dimensions = {"height": height, "width": width}
+
+            # MetaFormer dimensions are handled at the encoder level
         elif isinstance(raw_encoder, dict):
             # Handle image resize for regular encoders
             # Note: Standard encoders like ResNet don't support height/width parameters
@@ -705,7 +704,6 @@ class LudwigDirectBackend:
             }
         else:
             encoder_config = {"type": raw_encoder}
-            metaformer_dimensions = None
 
         batch_size_cfg = batch_size or "auto"
 
@@ -743,15 +741,15 @@ class LudwigDirectBackend:
                 dimensions = config_params["image_resize"].split("x")
                 if len(dimensions) == 2:
                     height, width = int(dimensions[0]), int(dimensions[1])
-                    
+
                     if is_metaformer:
                         # For MetaFormer models, resize is already handled at encoder level
                         logger.info(f"MetaFormer resize handled at encoder level: {height}x{width}")
-                        
+
                         # For MetaFormer models, DO NOT set preprocessing dimensions
                         # The encoder-level dimensions are sufficient and setting preprocessing
                         # dimensions can cause conflicts with Ludwig's internal logic
-                        logger.info(f"MetaFormer models use encoder-level dimensions only - no preprocessing resize needed")
+                        logger.info("MetaFormer models use encoder-level dimensions only - no preprocessing resize needed")
                     else:
                         # Add resize to preprocessing for standard encoders
                         if "preprocessing" not in image_feat:

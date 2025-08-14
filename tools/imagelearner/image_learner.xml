@@ -1,7 +1,7 @@
-<tool id="image_learner" name="Image Learner" version="0.1.1" profile="22.05">
-    <description>trains and evaluates an image classification/regression model</description>
+<tool id="image_learner" name="Image Learner for Classification" version="0.1.2" profile="22.05">
+    <description>trains and evaluates a image classification model</description>
     <requirements>
-        <container type="docker">quay.io/goeckslab/galaxy-ludwig-gpu:0.10.1</container>
+        <container type="docker">quay.io/goeckslab/galaxy-ludwig-gpu:latest</container>
     </requirements>
     <required_files>
         <include path="utils.py" />
@@ -144,13 +144,14 @@
         <conditional name="scratch_fine_tune">
             <param name="use_pretrained" type="select"
                 label="Use pretrained weights?"
-                help="If select no, the encoder, combiner, and decoder will all be initialized and trained from scratch. (e.g. when your images are very different from ImageNet or no suitable pretrained model exists.)">
+                help="If select no, the encoder, combiner, and decoder will all be initialized and trained from scratch.  
+               (e.g. when your images are very different from ImageNet or no suitable pretrained model exists.)">
                 <option value="false">No</option>
                 <option value="true" selected="true">Yes</option>
             </param>
             <when value="true">
                 <param name="fine_tune" type="select" label="Fine tune the encoder?"
-                    help="Whether to fine tune the encoder(combiner and decoder will be fine-tued anyway)" >
+                    help="Whether to fine tune the encoder(combiner and decoder will be fine-tuned anyway)" >
                     <option value="false" >No</option>
                     <option value="true" selected="true">Yes</option>
                 </param>
@@ -218,6 +219,7 @@
                         label="Test split proportion (only works if no split column in the metadata csv)"
                         value="0.2"
                         help="Fraction of data for testing (e.g., 0.2) train split + val split + test split should = 1."/>
+                <param name="threshold" type="float" value="0.5" min="0.0" max="1.0" optional="true" label="Decision Threshold (binary only)" help="Set the decision threshold for binary classification (0.0–1.0). Only applies when task is binary; default is 0.5." />
             </when>
             <when value="false">
                 <!-- No additional parameters to show if the user selects 'No' -->
@@ -307,8 +309,6 @@
                     <has_text text="Test Results" />
                 </assert_contents>
             </output>
-            <output name="output_report" file="expected_regression.html" compare="sim_size"/>
-
             <output_collection name="output_pred_csv" type="list" >
                 <element name="predictions.csv" >
                     <assert_contents>
@@ -317,17 +317,15 @@
                 </element>
             </output_collection>
         </test>
-    </tests>
+        </tests>
     <help>
         <![CDATA[
 **What it does**
-Image Learner for Classification/regression: trains and evaluates a image classification/regression model. 
+Image Learner for Classification: trains and evaluates a image classification model. 
 It uses the metadata csv to find the image paths and labels. 
 The metadata csv should contain a column with the name 'image_path' and a column with the name 'label'.
 Optionally, you can also add a column with the name 'split' to specify which split each row belongs to (train, val, test). 
 If you do not provide a split column, the tool will automatically split the data into train, val, and test sets based on the proportions you specify or [0.7, 0.1, 0.2] by default.
-
-**If the selected label column has more than 10 unique values, the tool will automatically treat the task as a regression problem and apply appropriate metrics (e.g., MSE, RMSE, R²).**
 
 
 **Outputs**

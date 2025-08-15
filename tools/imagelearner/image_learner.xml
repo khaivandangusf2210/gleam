@@ -1,4 +1,4 @@
-<tool id="imagelearner" name="Image Learner" version="0.1.1" profile="22.05">
+<tool id="image_learner" name="Image Learner" version="0.1.1" profile="22.05">
     <description>trains and evaluates an image classification/regression model</description>
     <requirements>
         <container type="docker">quay.io/goeckslab/galaxy-ludwig-gpu:0.10.1</container>
@@ -6,7 +6,7 @@
     <required_files>
         <include path="utils.py" />
         <include path="constants.py" />
-        <include path="imagelearner_cli.py" />
+        <include path="image_learner_cli.py" />
 
         <include path="MetaFormer/metaformer_models.py" />
         <include path="MetaFormer/metaformer_stacked_cnn.py" />
@@ -24,7 +24,7 @@
             ln -sf '$input_csv' "./${sanitized_input_csv}";
             #end if
 
-            python '$__tool_directory__/imagelearner_cli.py'
+            python '$__tool_directory__/image_learner_cli.py'
                 --csv-file "./${sanitized_input_csv}"
                 --image-zip "$image_zip"
                 --model-name "$model_name"

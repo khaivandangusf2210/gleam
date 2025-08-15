@@ -7,7 +7,13 @@ IMAGE_PATH_COLUMN_NAME = "image_path"
 DEFAULT_SPLIT_PROBABILITIES = [0.7, 0.1, 0.2]
 TEMP_CSV_FILENAME = "processed_data_for_ludwig.csv"
 TEMP_CONFIG_FILENAME = "ludwig_config.yaml"
-TEMP_DIR_PREFIX = "ludwig_api_work_"
+TEMP_DIR_PREFIX = "gleam_image_work_"
+PREDICTIONS_PARQUET_FILE_NAME = "predictions.parquet"
+TEST_STATISTICS_FILE_NAME = "test_statistics.json"
+TRAIN_SET_METADATA_FILE_NAME = "train_set_metadata.json"
+DESCRIPTION_FILE_NAME = "description.json"
+TRAINING_STATISTICS_FILE_NAME = "training_statistics.json"
+PREDICTIONS_SHAPES_FILE_NAME = "predictions.shapes"
 MODEL_ENCODER_TEMPLATES: Dict[str, Any] = {
     "stacked_cnn": "stacked_cnn",
     "resnet18": {"type": "resnet", "model_variant": 18},
@@ -73,6 +79,87 @@ MODEL_ENCODER_TEMPLATES: Dict[str, Any] = {
     "vit_l_16": {"type": "vit", "model_variant": "l_16"},
     "vit_l_32": {"type": "vit", "model_variant": "l_32"},
     "vit_h_14": {"type": "vit", "model_variant": "h_14"},
+    "vit_huge_timm": {"type": "vit", "model_variant": "huge_timm", "custom_encoder": True},
+    # MetaFormer family (support all variants via custom_model)
+    "identityformer_s12": {"type": "stacked_cnn", "custom_model": "identityformer_s12", "use_pretrained": True, "trainable": True},
+    "identityformer_s24": {"type": "stacked_cnn", "custom_model": "identityformer_s24", "use_pretrained": True, "trainable": True},
+    "identityformer_s36": {"type": "stacked_cnn", "custom_model": "identityformer_s36", "use_pretrained": True, "trainable": True},
+    "identityformer_m36": {"type": "stacked_cnn", "custom_model": "identityformer_m36", "use_pretrained": True, "trainable": True},
+    "identityformer_m48": {"type": "stacked_cnn", "custom_model": "identityformer_m48", "use_pretrained": True, "trainable": True},
+
+    "randformer_s12": {"type": "stacked_cnn", "custom_model": "randformer_s12", "use_pretrained": True, "trainable": True},
+    "randformer_s24": {"type": "stacked_cnn", "custom_model": "randformer_s24", "use_pretrained": True, "trainable": True},
+    "randformer_s36": {"type": "stacked_cnn", "custom_model": "randformer_s36", "use_pretrained": True, "trainable": True},
+    "randformer_m36": {"type": "stacked_cnn", "custom_model": "randformer_m36", "use_pretrained": True, "trainable": True},
+    "randformer_m48": {"type": "stacked_cnn", "custom_model": "randformer_m48", "use_pretrained": True, "trainable": True},
+
+    "poolformerv2_s12": {"type": "stacked_cnn", "custom_model": "poolformerv2_s12", "use_pretrained": True, "trainable": True},
+    "poolformerv2_s24": {"type": "stacked_cnn", "custom_model": "poolformerv2_s24", "use_pretrained": True, "trainable": True},
+    "poolformerv2_s36": {"type": "stacked_cnn", "custom_model": "poolformerv2_s36", "use_pretrained": True, "trainable": True},
+    "poolformerv2_m36": {"type": "stacked_cnn", "custom_model": "poolformerv2_m36", "use_pretrained": True, "trainable": True},
+    "poolformerv2_m48": {"type": "stacked_cnn", "custom_model": "poolformerv2_m48", "use_pretrained": True, "trainable": True},
+
+    "convformer_s18": {"type": "stacked_cnn", "custom_model": "convformer_s18", "use_pretrained": True, "trainable": True},
+    "convformer_s18_384": {"type": "stacked_cnn", "custom_model": "convformer_s18_384", "use_pretrained": True, "trainable": True},
+    "convformer_s18_in21ft1k": {"type": "stacked_cnn", "custom_model": "convformer_s18_in21ft1k", "use_pretrained": True, "trainable": True},
+    "convformer_s18_384_in21ft1k": {"type": "stacked_cnn", "custom_model": "convformer_s18_384_in21ft1k", "use_pretrained": True, "trainable": True},
+    "convformer_s18_in21k": {"type": "stacked_cnn", "custom_model": "convformer_s18_in21k", "use_pretrained": True, "trainable": True},
+    "convformer_s36": {"type": "stacked_cnn", "custom_model": "convformer_s36", "use_pretrained": True, "trainable": True},
+    "convformer_s36_384": {"type": "stacked_cnn", "custom_model": "convformer_s36_384", "use_pretrained": True, "trainable": True},
+    "convformer_s36_in21ft1k": {"type": "stacked_cnn", "custom_model": "convformer_s36_in21ft1k", "use_pretrained": True, "trainable": True},
+    "convformer_s36_384_in21ft1k": {"type": "stacked_cnn", "custom_model": "convformer_s36_384_in21ft1k", "use_pretrained": True, "trainable": True},
+    "convformer_s36_in21k": {"type": "stacked_cnn", "custom_model": "convformer_s36_in21k", "use_pretrained": True, "trainable": True},
+    "convformer_m36": {"type": "stacked_cnn", "custom_model": "convformer_m36", "use_pretrained": True, "trainable": True},
+    "convformer_m36_384": {"type": "stacked_cnn", "custom_model": "convformer_m36_384", "use_pretrained": True, "trainable": True},
+    "convformer_m36_in21ft1k": {"type": "stacked_cnn", "custom_model": "convformer_m36_in21ft1k", "use_pretrained": True, "trainable": True},
+    "convformer_m36_384_in21ft1k": {"type": "stacked_cnn", "custom_model": "convformer_m36_384_in21ft1k", "use_pretrained": True, "trainable": True},
+    "convformer_m36_in21k": {"type": "stacked_cnn", "custom_model": "convformer_m36_in21k", "use_pretrained": True, "trainable": True},
+    "convformer_b36": {"type": "stacked_cnn", "custom_model": "convformer_b36", "use_pretrained": True, "trainable": True},
+    "convformer_b36_384": {"type": "stacked_cnn", "custom_model": "convformer_b36_384", "use_pretrained": True, "trainable": True},
+    "convformer_b36_in21ft1k": {"type": "stacked_cnn", "custom_model": "convformer_b36_in21ft1k", "use_pretrained": True, "trainable": True},
+    "convformer_b36_384_in21ft1k": {"type": "stacked_cnn", "custom_model": "convformer_b36_384_in21ft1k", "use_pretrained": True, "trainable": True},
+    "convformer_b36_in21k": {"type": "stacked_cnn", "custom_model": "convformer_b36_in21k", "use_pretrained": True, "trainable": True},
+
+    "caformer_s18": {
+        "type": "stacked_cnn",
+        "custom_model": "caformer_s18",
+        "use_pretrained": True,
+        "trainable": True,
+    },
+    "caformer_s36": {
+        "type": "stacked_cnn",
+        "custom_model": "caformer_s36",
+        "use_pretrained": True,
+        "trainable": True,
+    },
+    "caformer_m36": {
+        "type": "stacked_cnn",
+        "custom_model": "caformer_m36",
+        "use_pretrained": True,
+        "trainable": True,
+    },
+    "caformer_b36": {
+        "type": "stacked_cnn",
+        "custom_model": "caformer_b36",
+        "use_pretrained": True,
+        "trainable": True,
+    },
+    "caformer_s18_384": {"type": "stacked_cnn", "custom_model": "caformer_s18_384", "use_pretrained": True, "trainable": True},
+    "caformer_s18_in21ft1k": {"type": "stacked_cnn", "custom_model": "caformer_s18_in21ft1k", "use_pretrained": True, "trainable": True},
+    "caformer_s18_384_in21ft1k": {"type": "stacked_cnn", "custom_model": "caformer_s18_384_in21ft1k", "use_pretrained": True, "trainable": True},
+    "caformer_s18_in21k": {"type": "stacked_cnn", "custom_model": "caformer_s18_in21k", "use_pretrained": True, "trainable": True},
+    "caformer_s36_384": {"type": "stacked_cnn", "custom_model": "caformer_s36_384", "use_pretrained": True, "trainable": True},
+    "caformer_s36_in21ft1k": {"type": "stacked_cnn", "custom_model": "caformer_s36_in21ft1k", "use_pretrained": True, "trainable": True},
+    "caformer_s36_384_in21ft1k": {"type": "stacked_cnn", "custom_model": "caformer_s36_384_in21ft1k", "use_pretrained": True, "trainable": True},
+    "caformer_s36_in21k": {"type": "stacked_cnn", "custom_model": "caformer_s36_in21k", "use_pretrained": True, "trainable": True},
+    "caformer_m36_384": {"type": "stacked_cnn", "custom_model": "caformer_m36_384", "use_pretrained": True, "trainable": True},
+    "caformer_m36_in21ft1k": {"type": "stacked_cnn", "custom_model": "caformer_m36_in21ft1k", "use_pretrained": True, "trainable": True},
+    "caformer_m36_384_in21ft1k": {"type": "stacked_cnn", "custom_model": "caformer_m36_384_in21ft1k", "use_pretrained": True, "trainable": True},
+    "caformer_m36_in21k": {"type": "stacked_cnn", "custom_model": "caformer_m36_in21k", "use_pretrained": True, "trainable": True},
+    "caformer_b36_384": {"type": "stacked_cnn", "custom_model": "caformer_b36_384", "use_pretrained": True, "trainable": True},
+    "caformer_b36_in21ft1k": {"type": "stacked_cnn", "custom_model": "caformer_b36_in21ft1k", "use_pretrained": True, "trainable": True},
+    "caformer_b36_384_in21ft1k": {"type": "stacked_cnn", "custom_model": "caformer_b36_384_in21ft1k", "use_pretrained": True, "trainable": True},
+    "caformer_b36_in21k": {"type": "stacked_cnn", "custom_model": "caformer_b36_in21k", "use_pretrained": True, "trainable": True},
     "convnext_tiny": {"type": "convnext", "model_variant": "tiny"},
     "convnext_small": {"type": "convnext", "model_variant": "small"},
     "convnext_base": {"type": "convnext", "model_variant": "base"},

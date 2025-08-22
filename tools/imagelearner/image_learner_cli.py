@@ -30,8 +30,8 @@ from ludwig.globals import (
     TRAIN_SET_METADATA_FILE_NAME,
 )
 from ludwig.utils.data_utils import get_split_path
-from sklearn.model_selection import train_test_split
 from plotly_plots import build_classification_plots
+from sklearn.model_selection import train_test_split
 
 from utils import (
     build_tabbed_html,

@@ -31,6 +31,8 @@ from ludwig.globals import (
 )
 from ludwig.utils.data_utils import get_split_path
 from sklearn.model_selection import train_test_split
+from plotly_plots import build_classification_plots
+
 from utils import (
     build_tabbed_html,
     encode_image_to_base64,
@@ -64,6 +66,7 @@ def format_config_table_html(
     config: dict,
     split_info: Optional[str] = None,
     training_progress: dict = None,
+    output_type: Optional[str] = None,
 ) -> str:
     display_keys = [
         "task_type",
@@ -75,25 +78,28 @@ def format_config_table_html(
         "learning_rate",
         "random_seed",
         "early_stop",
+        "threshold",
     ]
 
     rows = []
 
     for key in display_keys:
-        val = config.get(key, "N/A")
-        if key == "task_type":
-            val = val.title() if isinstance(val, str) else val
-        if key == "batch_size":
-            if val is not None:
-                val = int(val)
-            else:
-                if training_progress:
-                    val = "Auto-selected batch size by Ludwig:<br>"
-                    resolved_val = training_progress.get("batch_size")
-                    val += f"<span style='font-size: 0.85em;'>{resolved_val}</span><br>"
+        val = config.get(key, None)
+        if key == "threshold":
+            if output_type != "binary":
+                continue
+            val = val if val is not None else 0.5
+            val_str = f"{val:.2f}"
+            if val == 0.5:
+                val_str += " (default)"
+        else:
+            if key == "task_type":
+                val_str = val.title() if isinstance(val, str) else "N/A"
+            elif key == "batch_size":
+                if val is not None:
+                    val_str = int(val)
                 else:
                     val = "auto"
-        if key == "learning_rate":
             resolved_val = None
             if val is None or val == "auto":
                 if training_progress:
@@ -120,27 +126,56 @@ def format_config_table_html(
                         "Ludwig Trainer Parameters</a> for details."
                         "</span>"
                     )
+            elif key == "learning_rate":
+                if val is not None and val != "auto":
+                    val_str = f"{val:.6f}"
+                else:
+                    if training_progress:
+                        resolved_val = training_progress.get("learning_rate")
+                        val_str = (
+                            "Auto-selected learning rate by Ludwig:<br>"
+                            f"<span style='font-size: 0.85em;'>"
+                            f"{resolved_val if resolved_val else 'auto'}</span><br>"
+                            "<span style='font-size: 0.85em;'>"
+                            "Based on model architecture and training setup "
+                            "(e.g., fine-tuning).<br>"
+                            "</span>"
+                        )
+                    else:
+                        val_str = (
+                            "Auto-selected by Ludwig<br>"
+                            "<span style='font-size: 0.85em;'>"
+                            "Automatically tuned based on architecture and dataset.<br>"
+                            "See <a href='https://ludwig.ai/latest/configuration/trainer/"
+                            "#trainer-parameters' target='_blank'>"
+                            "Ludwig Trainer Parameters</a> for details."
+                            "</span>"
+                        )
+            elif key == "epochs":
+                if val is None:
+                    val_str = "N/A"
+                else:
+                    if (
+                        training_progress
+                        and "epoch" in training_progress
+                        and val > training_progress["epoch"]
+                    ):
+                        val_str = (
+                            f"Because of early stopping: the training "
+                            f"stopped at epoch {training_progress['epoch']}"
+                        )
+                    else:
+                        val_str = val
             else:
-                val = f"{val:.6f}"
-        if key == "epochs":
-            if (
-                training_progress
-                and "epoch" in training_progress
-                and val > training_progress["epoch"]
-            ):
-                val = (
-                    f"Because of early stopping: the training "
-                    f"stopped at epoch {training_progress['epoch']}"
-                )
-
-        if val is None:
-            continue
+                val_str = val if val is not None else "N/A"
+            if val_str == "N/A" and key not in ["task_type"]:  # Skip if N/A for non-essential
+                continue
         rows.append(
             f"<tr>"
             f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>"
             f"{key.replace('_', ' ').title()}</td>"
             f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>"
-            f"{val}</td>"
+            f"{val_str}</td>"
             f"</tr>"
         )
 
@@ -166,23 +201,27 @@ def format_config_table_html(
             f"</tr>"
         )
 
-    return (
-        "<h2 style='text-align: center;'>Training Setup</h2>"
-        "<div style='display: flex; justify-content: center;'>"
-        "<table style='border-collapse: collapse; width: 60%; table-layout: auto;'>"
-        "<thead><tr>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: left;'>"
-        "Parameter</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>"
-        "Value</th>"
-        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div><br>"
-        "<p style='text-align: center; font-size: 0.9em;'>"
-        "Model trained using Ludwig.<br>"
-        "If want to learn more about Ludwig default settings,"
-        "please check their <a href='https://ludwig.ai' target='_blank'>"
-        "website(ludwig.ai)</a>."
-        "</p><hr>"
-    )
+    html = f"""
+        <h2 style="text-align: center;">Model and Training Summary</h2>
+        <div style="display: flex; justify-content: center;">
+          <table style="border-collapse: collapse; width: 100%; table-layout: fixed;">
+            <thead><tr>
+              <th style="padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Parameter</th>
+              <th style="padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Value</th>
+            </tr></thead>
+            <tbody>
+              {''.join(rows)}
+            </tbody>
+          </table>
+        </div><br>
+        <p style="text-align: center; font-size: 0.9em;">
+          Model trained using <a href="https://ludwig.ai/" target="_blank" rel="noopener noreferrer">Ludwig</a>.
+          <a href="https://ludwig.ai/latest/configuration/" target="_blank" rel="noopener noreferrer">
+            Ludwig documentation provides detailed information about default model and training parameters
+          </a>
+        </p><hr>
+        """
+    return html
 
 
 def detect_output_type(test_stats):
@@ -303,6 +342,9 @@ def generate_table_row(cells, styles):
     )
 
 
+# -----------------------------------------
+# 2) MODEL PERFORMANCE (Train/Val/Test) TABLE
+# -----------------------------------------
 def format_stats_table_html(train_stats: dict, test_stats: dict) -> str:
     """Formats a combined HTML table for training, validation, and test metrics."""
     output_type = detect_output_type(test_stats)
@@ -329,28 +371,26 @@ def format_stats_table_html(train_stats: dict, test_stats: dict) -> str:
     html = (
         "<h2 style='text-align: center;'>Model Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table style='border-collapse: collapse; table-layout: auto;'>"
+        "<table class='performance-summary' style='border-collapse: collapse;'>"
         "<thead><tr>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: left; "
-        "white-space: nowrap;'>Metric</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center; "
-        "white-space: nowrap;'>Train</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center; "
-        "white-space: nowrap;'>Validation</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center; "
-        "white-space: nowrap;'>Test</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Train</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Validation</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Test</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:
         html += generate_table_row(
             row,
-            "padding: 10px; border: 1px solid #ccc; text-align: center; "
-            "white-space: nowrap;",
+            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;"
         )
     html += "</tbody></table></div><br>"
     return html
 
 
+# -------------------------------------------
+# 3) TRAIN/VALIDATION PERFORMANCE SUMMARY TABLE
+# -------------------------------------------
 def format_train_val_stats_table_html(train_stats: dict, test_stats: dict) -> str:
     """Formats an HTML table for training and validation metrics."""
     output_type = detect_output_type(test_stats)
@@ -373,26 +413,25 @@ def format_train_val_stats_table_html(train_stats: dict, test_stats: dict) -> st
     html = (
         "<h2 style='text-align: center;'>Train/Validation Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table style='border-collapse: collapse; table-layout: auto;'>"
+        "<table class='performance-summary' style='border-collapse: collapse;'>"
         "<thead><tr>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: left; "
-        "white-space: nowrap;'>Metric</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center; "
-        "white-space: nowrap;'>Train</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center; "
-        "white-space: nowrap;'>Validation</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Train</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Validation</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:
         html += generate_table_row(
             row,
-            "padding: 10px; border: 1px solid #ccc; text-align: center; "
-            "white-space: nowrap;",
+            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;"
         )
     html += "</tbody></table></div><br>"
     return html
 
 
+# -----------------------------------------
+# 4) TEST‐ONLY PERFORMANCE SUMMARY TABLE
+# -----------------------------------------
 def format_test_merged_stats_table_html(
     test_metrics: Dict[str, Optional[float]],
 ) -> str:
@@ -410,19 +449,16 @@ def format_test_merged_stats_table_html(
     html = (
         "<h2 style='text-align: center;'>Test Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table style='border-collapse: collapse; table-layout: auto;'>"
+        "<table class='performance-summary' style='border-collapse: collapse;'>"
         "<thead><tr>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: left; "
-        "white-space: nowrap;'>Metric</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center; "
-        "white-space: nowrap;'>Test</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Test</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:
         html += generate_table_row(
             row,
-            "padding: 10px; border: 1px solid #ccc; text-align: center; "
-            "white-space: nowrap;",
+            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;"
         )
     html += "</tbody></table></div><br>"
     return html
@@ -1115,7 +1151,7 @@ class LudwigDirectBackend:
         training_progress = self.get_training_process(output_dir)
         try:
             config_html = format_config_table_html(
-                config, split_info, training_progress
+                config, split_info, training_progress, output_type
             )
         except Exception as e:
             logger.warning(f"Could not load config for HTML report: {e}")
@@ -1240,11 +1276,31 @@ class LudwigDirectBackend:
                 )
             except Exception as e:
                 logger.warning(f"Could not build Predictions vs GT table: {e}")
-        # Test tab = Metrics + Preds table + Visualizations
+        # Test tab = Metrics + Preds table + Interactive Plotly plots + Visualizations
+
+        # Add interactive Plotly plots for classification tasks
+        plotly_section = ""
+        if output_type in ("binary", "category") and test_stats_path.exists():
+            try:
+                interactive_plots = build_classification_plots(
+                    str(test_stats_path),
+                    str(train_stats_path) if train_stats_path.exists() else None
+                )
+
+                for plot in interactive_plots:
+                    plotly_section += (
+                        f"<h2 style='text-align: center;'>{plot['title']}</h2>"
+                        + plot["html"]
+                    )
+
+                logger.info(f"Generated {len(interactive_plots)} interactive Plotly plots")
+            except Exception as e:
+                logger.warning(f"Could not generate Plotly plots: {e}")
 
         tab3_content = (
             test_metrics_html
             + preds_section
+            + plotly_section
             + render_img_section("Test Visualizations", test_viz_dir, output_type)
         )
 
@@ -1443,6 +1499,7 @@ class WorkflowOrchestrator:
                 "label_column_data_path": csv_path,
                 "augmentation": self.args.augmentation,
                 "image_resize": self.args.image_resize,
+                "threshold": self.args.threshold,
             }
             yaml_str = self.backend.prepare_config(backend_args, split_cfg)
 
@@ -1678,7 +1735,7 @@ def main():
     parser.add_argument(
         "--validation-size",
         type=float,
-        default=0.1,
+        default=0.15,
         help="Fraction for validation (0.0–1.0)",
     )
     parser.add_argument(
@@ -1731,6 +1788,15 @@ def main():
         ],
         default="original",
         help="Image resize option. 'original' keeps images as-is, other options resize to specified dimensions.",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=None,
+        help=(
+            "Decision threshold for binary classification (0.0–1.0)."
+            "Overrides default 0.5."
+        )
     )
 
     args = parser.parse_args()

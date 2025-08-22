@@ -32,7 +32,6 @@ from ludwig.globals import (
 from ludwig.utils.data_utils import get_split_path
 from plotly_plots import build_classification_plots
 from sklearn.model_selection import train_test_split
-
 from utils import (
     build_tabbed_html,
     encode_image_to_base64,

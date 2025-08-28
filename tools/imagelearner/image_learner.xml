@@ -1,5 +1,5 @@
-<tool id="image_learner" name="Image Learner for Classification" version="0.1.2" profile="22.05">
-    <description>trains and evaluates a image classification model</description>
+<tool id="image_learner" name="Image Learner" version="0.1.2" profile="22.05">
+    <description>trains and evaluates an image classification/regression model</description>
     <requirements>
         <container type="docker">quay.io/goeckslab/galaxy-ludwig-gpu:latest</container>
     </requirements>
@@ -48,6 +48,9 @@
                         --batch-size "$batch_size"
                     #end if
                     --split-probabilities "$train_split" "$val_split" "$test_split"
+                    #if $threshold
+                        --threshold "$threshold"
+                    #end if
                 #end if
                 #if $augmentation
                     --augmentation "$augmentation"
@@ -205,8 +208,7 @@
         <conditional name="scratch_fine_tune">
             <param name="use_pretrained" type="select"
                 label="Use pretrained weights?"
-                help="If select no, the encoder, combiner, and decoder will all be initialized and trained from scratch.  
-               (e.g. when your images are very different from ImageNet or no suitable pretrained model exists.)">
+                help="If select no, the encoder, combiner, and decoder will all be initialized and trained from scratch. (e.g. when your images are very different from ImageNet or no suitable pretrained model exists.)">
                 <option value="false">No</option>
                 <option value="true" selected="true">Yes</option>
             </param>
@@ -444,27 +446,14 @@
     <help>
         <![CDATA[
 **What it does**
-Image Learner for Classification: trains and evaluates a image classification model. 
-It uses the metadata csv to find the image paths and labels. 
+Image Learner for Classification/regression: trains and evaluates a image classification/regression model.
+It uses the metadata csv to find the image paths and labels.
 The metadata csv should contain a column with the name 'image_path' and a column with the name 'label'.
-Optionally, you can also add a column with the name 'split' to specify which split each row belongs to (train, val, test). 
+Optionally, you can also add a column with the name 'split' to specify which split each row belongs to (train, val, test).
 If you do not provide a split column, the tool will automatically split the data into train, val, and test sets based on the proportions you specify or [0.7, 0.1, 0.2] by default.
-
-**Models Available**
-This tool supports a wide range of state-of-the-art image classification models including:
-- Traditional CNNs (ResNet, EfficientNet, VGG, etc.)
-- Vision Transformers (ViT, Swin Transformer)
-- Modern architectures (ConvNeXt, MaxViT)
-- MetaFormer family models (IdentityFormer, RandFormer, PoolFormerV2, ConvFormer, CAFormer)
-
-**MetaFormer Models**
-The MetaFormer family represents a unified perspective on transformer-like architectures. These models demonstrate that the success of transformers is largely due to their general architecture rather than specific components like attention mechanisms. All MetaFormer models use pretrained weights from Hugging Face and provide explicit confirmation of weight loading.
-
-
+**If the selected label column has more than 10 unique values, the tool will automatically treat the task as a regression problem and apply appropriate metrics (e.g., MSE, RMSE, R²).**
 **Outputs**
-The tool will output a trained model in the form of a ludwig_model file,
-a report in the form of an HTML file, and a collection of CSV/json/png files containing the predictions, experiment stats and visualizations.
-The html report will contain metrics&experiment setup parameters, train&val plots and test plots.
+The tool will output a trained model in the form of a ludwig_model file
 
         ]]>
     </help>

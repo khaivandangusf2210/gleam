@@ -43,7 +43,7 @@ from utils import (
 # --- Logging Setup ---
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("ImageLearner")
 
@@ -167,7 +167,9 @@ def format_config_table_html(
                         val_str = val
             else:
                 val_str = val if val is not None else "N/A"
-            if val_str == "N/A" and key not in ["task_type"]:  # Skip if N/A for non-essential
+            if val_str == "N/A" and key not in [
+                "task_type"
+            ]:  # Skip if N/A for non-essential
                 continue
         rows.append(
             f"<tr>"
@@ -314,21 +316,16 @@ def extract_metrics_from_json(
         for k, v in test_label_stats.items():
             if k in exclude:
                 continue
-            if k == "overall_stats":
-                continue
             if isinstance(v, (int, float, str, bool)):
                 test_metrics[k] = v
 
         # 2. Add overall_stats (flattened)
         for k, v in overall_stats.items():
             test_metrics[k] = v
-
         # 3. Optionally include combined/loss if present and not already
         if "loss" in combined_stats and "loss" not in test_metrics:
             test_metrics["loss"] = combined_stats["loss"]
-
         metrics["test"] = test_metrics
-
     return metrics
 
 
@@ -344,9 +341,8 @@ def generate_table_row(cells, styles):
 # -----------------------------------------
 # 2) MODEL PERFORMANCE (Train/Val/Test) TABLE
 # -----------------------------------------
-def format_stats_table_html(train_stats: dict, test_stats: dict) -> str:
+def format_stats_table_html(train_stats: dict, test_stats: dict, output_type: str) -> str:
     """Formats a combined HTML table for training, validation, and test metrics."""
-    output_type = detect_output_type(test_stats)
     all_metrics = extract_metrics_from_json(train_stats, test_stats, output_type)
     rows = []
     for metric_key in sorted(all_metrics["training"].keys()):
@@ -363,25 +359,23 @@ def format_stats_table_html(train_stats: dict, test_stats: dict) -> str:
             te = all_metrics["test"].get(metric_key)
             if all(x is not None for x in [t, v, te]):
                 rows.append([display_name, f"{t:.4f}", f"{v:.4f}", f"{te:.4f}"])
-
     if not rows:
         return "<table><tr><td>No metric values found.</td></tr></table>"
-
     html = (
         "<h2 style='text-align: center;'>Model Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table class='performance-summary' style='border-collapse: collapse;'>"
+        "<table style='width: auto; border-collapse: collapse; margin-top: 20px;'>"
         "<thead><tr>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Train</th>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Validation</th>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Test</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Metric</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Train</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Validation</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Test</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:
         html += generate_table_row(
             row,
-            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;"
+            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;",
         )
     html += "</tbody></table></div><br>"
     return html
@@ -391,38 +385,30 @@ def format_stats_table_html(train_stats: dict, test_stats: dict) -> str:
 # 3) TRAIN/VALIDATION PERFORMANCE SUMMARY TABLE
 # -------------------------------------------
 def format_train_val_stats_table_html(train_stats: dict, test_stats: dict) -> str:
-    """Formats an HTML table for training and validation metrics."""
-    output_type = detect_output_type(test_stats)
-    all_metrics = extract_metrics_from_json(train_stats, test_stats, output_type)
+    """Format train/validation metrics into an HTML table."""
+    all_metrics = extract_metrics_from_json(train_stats, test_stats, detect_output_type(test_stats))
     rows = []
-    for metric_key in sorted(all_metrics["training"].keys()):
-        if metric_key in all_metrics["validation"]:
-            display_name = METRIC_DISPLAY_NAMES.get(
-                metric_key,
-                metric_key.replace("_", " ").title(),
-            )
-            t = all_metrics["training"].get(metric_key)
-            v = all_metrics["validation"].get(metric_key)
-            if t is not None and v is not None:
-                rows.append([display_name, f"{t:.4f}", f"{v:.4f}"])
-
+    for metric_key, display_name in METRIC_DISPLAY_NAMES.items():
+        t = all_metrics["training"].get(metric_key)
+        v = all_metrics["validation"].get(metric_key)
+        if t is not None and v is not None:
+            rows.append([display_name, f"{t:.4f}", f"{v:.4f}"])
     if not rows:
         return "<table><tr><td>No metric values found for Train/Validation.</td></tr></table>"
-
     html = (
         "<h2 style='text-align: center;'>Train/Validation Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table class='performance-summary' style='border-collapse: collapse;'>"
+        "<table style='width: auto; border-collapse: collapse; margin-top: 20px;'>"
         "<thead><tr>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Train</th>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Validation</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Metric</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Train</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Validation</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:
         html += generate_table_row(
             row,
-            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;"
+            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;",
         )
     html += "</tbody></table></div><br>"
     return html
@@ -432,32 +418,30 @@ def format_train_val_stats_table_html(train_stats: dict, test_stats: dict) -> st
 # 4) TEST‐ONLY PERFORMANCE SUMMARY TABLE
 # -----------------------------------------
 def format_test_merged_stats_table_html(
-    test_metrics: Dict[str, Optional[float]],
+    test_metrics: Dict[str, Any], output_type: str
 ) -> str:
-    """Formats an HTML table for test metrics."""
+    """Format test metrics into an HTML table."""
     rows = []
-    for key in sorted(test_metrics.keys()):
-        display_name = METRIC_DISPLAY_NAMES.get(key, key.replace("_", " ").title())
-        value = test_metrics[key]
-        if value is not None:
-            rows.append([display_name, f"{value:.4f}"])
-
+    for key, display_name in METRIC_DISPLAY_NAMES.items():
+        if key in test_metrics:
+            value = test_metrics[key]
+            if value is not None:
+                rows.append([display_name, f"{value:.4f}"])
     if not rows:
         return "<table><tr><td>No test metric values found.</td></tr></table>"
-
     html = (
         "<h2 style='text-align: center;'>Test Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table class='performance-summary' style='border-collapse: collapse;'>"
+        "<table style='width: auto; border-collapse: collapse; margin-top: 20px;'>"
         "<thead><tr>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
-        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Test</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Metric</th>"
+        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Value</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:
         html += generate_table_row(
             row,
-            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;"
+            "padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;",
         )
     html += "</tbody></table></div><br>"
     return html
@@ -486,11 +470,14 @@ def split_data_0_2(
             # Force stratify even with fewer samples - adjust validation_size if needed
             min_samples_per_class = label_counts.min()
             if min_samples_per_class * validation_size < 1:
-                # Adjust validation_size to ensure at least 1 sample per class, but do not exceed original validation_size
-                adjusted_validation_size = min(validation_size, 1.0 / min_samples_per_class)
+                adjusted_validation_size = min(
+                    validation_size, 1.0 / min_samples_per_class
+                )
                 if adjusted_validation_size != validation_size:
                     validation_size = adjusted_validation_size
-                    logger.info(f"Adjusted validation_size to {validation_size:.3f} to ensure at least one sample per class in validation")
+                    logger.info(
+                        f"Adjusted validation_size to {validation_size:.3f} to ensure at least one sample per class in validation"
+                    )
             stratify_arr = out.loc[idx_train, label_column]
             logger.info("Using stratified split for validation set")
         else:
@@ -539,7 +526,9 @@ def create_stratified_random_split(
     out[split_column] = 0
 
     if not label_column or label_column not in out.columns:
-        logger.warning("No label column found; using random split without stratification")
+        logger.warning(
+            "No label column found; using random split without stratification"
+        )
         # fall back to simple random assignment
         indices = out.index.tolist()
         np.random.seed(random_state)
@@ -593,12 +582,14 @@ def create_stratified_random_split(
     )
 
     # second split: separate training and validation from remaining data
-    val_size_adjusted = split_probabilities[1] / (split_probabilities[0] + split_probabilities[1])
+    val_size_adjusted = split_probabilities[1] / (
+        split_probabilities[0] + split_probabilities[1]
+    )
     train_idx, val_idx = train_test_split(
         train_val_idx,
         test_size=val_size_adjusted,
         random_state=random_state,
-        stratify=out.loc[train_val_idx, label_column],
+        stratify=out.loc[train_val_idx, label_column] if label_column else None,
     )
 
     # assign split values
@@ -607,7 +598,9 @@ def create_stratified_random_split(
     out.loc[test_idx, split_column] = 2
 
     logger.info("Successfully applied stratified random split")
-    logger.info(f"Split counts: Train={len(train_idx)}, Val={len(val_idx)}, Test={len(test_idx)}")
+    logger.info(
+        f"Split counts: Train={len(train_idx)}, Val={len(val_idx)}, Test={len(test_idx)}"
+    )
 
     return out.astype({split_column: int})
 
@@ -844,7 +837,7 @@ class LudwigDirectBackend:
             output_feat = {
                 "name": LABEL_COLUMN_NAME,
                 "type": "number",
-                "decoder": {"type": "regressor"},
+                "decoder": {"type": "regressor", "input_size": 1},
                 "loss": {"type": "mean_squared_error"},
                 "evaluation": {
                     "metrics": [
@@ -861,7 +854,14 @@ class LudwigDirectBackend:
                 label_series.nunique() if label_series is not None else 2
             )
             output_type = "binary" if num_unique_labels == 2 else "category"
-            output_feat = {"name": LABEL_COLUMN_NAME, "type": output_type}
+            output_feat = {
+                "name": LABEL_COLUMN_NAME,
+                "type": "category" if num_unique_labels > 2 else "binary",
+                "decoder": {"type": "classifier", "input_size": num_unique_labels},
+                "loss": {"type": "softmax_cross_entropy"},
+            }
+            if output_type == "binary" and config_params.get("threshold") is not None:
+                output_feat["threshold"] = float(config_params["threshold"])
             val_metric = None
 
         conf: Dict[str, Any] = {
@@ -922,7 +922,7 @@ class LudwigDirectBackend:
                 dataset=str(dataset_path),
                 config=str(config_path),
                 output_directory=str(output_dir),
-                random_seed=random_seed,
+                skip_preprocessing=True,
             )
             logger.info(
                 f"LudwigDirectBackend: Experiment completed. Results in {output_dir}"
@@ -1132,14 +1132,14 @@ class LudwigDirectBackend:
                 with open(test_stats_path) as f:
                     test_stats = json.load(f)
                 output_type = detect_output_type(test_stats)
-                metrics_html = format_stats_table_html(train_stats, test_stats)
+                metrics_html = format_stats_table_html(train_stats, test_stats, output_type)
                 train_val_metrics_html = format_train_val_stats_table_html(
                     train_stats, test_stats
                 )
                 test_metrics_html = format_test_merged_stats_table_html(
                     extract_metrics_from_json(train_stats, test_stats, output_type)[
                         "test"
-                    ]
+                    ], output_type
                 )
         except Exception as e:
             logger.warning(

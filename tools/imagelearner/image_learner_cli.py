@@ -388,11 +388,17 @@ def format_train_val_stats_table_html(train_stats: dict, test_stats: dict) -> st
     """Format train/validation metrics into an HTML table."""
     all_metrics = extract_metrics_from_json(train_stats, test_stats, detect_output_type(test_stats))
     rows = []
-    for metric_key, display_name in METRIC_DISPLAY_NAMES.items():
-        t = all_metrics["training"].get(metric_key)
-        v = all_metrics["validation"].get(metric_key)
-        if t is not None and v is not None:
-            rows.append([display_name, f"{t:.4f}", f"{v:.4f}"])
+    for metric_key in sorted(all_metrics["training"].keys()):
+        if metric_key in all_metrics["validation"]:
+            display_name = METRIC_DISPLAY_NAMES.get(
+                metric_key,
+                metric_key.replace("_", " ").title(),
+            )
+            t = all_metrics["training"].get(metric_key)
+            v = all_metrics["validation"].get(metric_key)
+            if t is not None and v is not None:
+                rows.append([display_name, f"{t:.4f}", f"{v:.4f}"])
+
     if not rows:
         return "<table><tr><td>No metric values found for Train/Validation.</td></tr></table>"
     html = (
@@ -422,11 +428,12 @@ def format_test_merged_stats_table_html(
 ) -> str:
     """Format test metrics into an HTML table."""
     rows = []
-    for key, display_name in METRIC_DISPLAY_NAMES.items():
-        if key in test_metrics:
-            value = test_metrics[key]
-            if value is not None:
-                rows.append([display_name, f"{value:.4f}"])
+    for key in sorted(test_metrics.keys()):
+        display_name = METRIC_DISPLAY_NAMES.get(key, key.replace("_", " ").title())
+        value = test_metrics[key]
+        if value is not None:
+            rows.append([display_name, f"{value:.4f}"])
+
     if not rows:
         return "<table><tr><td>No test metric values found.</td></tr></table>"
     html = (
@@ -990,7 +997,7 @@ class LudwigDirectBackend:
             logger.error(f"Error converting Parquet to CSV: {e}")
 
     def generate_plots(self, output_dir: Path) -> None:
-        """Generate all registered Ludwig visualizations for the latest experiment run."""
+        """Generate all Ludwig visualizations for the latest experiment run."""
         logger.info("Generating visualizations (minimal set)…")
 
         try:
@@ -1162,8 +1169,16 @@ class LudwigDirectBackend:
                 return f"<h2>{title}</h2><p><em>Directory not found.</em></p>"
 
             imgs = list(dir_path.glob("*.png"))
-            if not imgs:
-                return f"<h2>{title}</h2><p><em>No plots found.</em></p>"
+            # --- EXCLUDE Ludwig's base confusion matrix and any top-N confusion_matrix files ---
+            imgs = [
+                img
+                for img in imgs
+                if not (
+                    img.name == "confusion_matrix.png"
+                    or img.name.startswith("confusion_matrix__label_top")
+                    or img.name == "roc_curves.png"
+                )
+            ]
 
             if title == "Test Visualizations" and output_type == "binary":
                 order = [
@@ -1199,14 +1214,14 @@ class LudwigDirectBackend:
                     "compare_classifiers_multiclass_multimetric__label_sorted.png",
                     "confusion_matrix_entropy__label_top10.png",
                 ]
-                img_names = {img.name: img for img in imgs if img.name not in unwanted}
-                ordered_imgs = [
-                    img_names[fname] for fname in display_order if fname in img_names
-                ]
-                remaining = sorted(
-                    [img for img in img_names.values() if img.name not in display_order]
+                # filter and order
+                valid_imgs = [img for img in imgs if img.name not in unwanted]
+                img_map = {img.name: img for img in valid_imgs}
+                ordered = [img_map[n] for n in display_order if n in img_map]
+                others = sorted(
+                    img for img in valid_imgs if img.name not in display_order
                 )
-                imgs = ordered_imgs + remaining
+                imgs = ordered + others
 
             else:
                 if output_type == "category":
@@ -1261,7 +1276,7 @@ class LudwigDirectBackend:
                     LABEL_COLUMN_NAME
                 ].reset_index(drop=True)
 
-                # 3) concatenate side‐by‐side
+                # 3) concatenate side-by-side
                 df_table = pd.concat([df_gt, df_pred], axis=1)
                 df_table.columns = [LABEL_COLUMN_NAME, "prediction"]
 

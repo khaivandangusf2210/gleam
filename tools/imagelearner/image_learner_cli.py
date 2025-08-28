@@ -30,6 +30,7 @@ from ludwig.globals import (
     TRAIN_SET_METADATA_FILE_NAME,
 )
 from ludwig.utils.data_utils import get_split_path
+from ludwig.visualize import get_visualizations_registry
 from plotly_plots import build_classification_plots
 from sklearn.model_selection import train_test_split
 from utils import (
@@ -1000,17 +1001,7 @@ class LudwigDirectBackend:
         """Generate all Ludwig visualizations for the latest experiment run."""
         logger.info("Generating visualizations (minimal set)…")
 
-        try:
-            from ludwig.visualize import get_visualizations_registry
-        except ImportError as e:
-            if "ptitprince" in str(e):
-                logger.warning("Visualization dependencies unavailable; skipping plots: ptitprince module not found. Install with: pip install ptitprince")
-            else:
-                logger.warning(f"Visualization dependencies unavailable; skipping plots: {e}")
-            return
-        except Exception as e:
-            logger.warning(f"Visualization dependencies unavailable; skipping plots: {e}")
-            return
+        # Import already available at top of file
 
         # Keep a minimal set of plots to significantly reduce disk usage
         test_plots = {

@@ -73,3 +73,9 @@ tool_test_output.json
 .venv
 
 
+
+# Virtual environment
+venv_py311/
+
+# Pylint reports
+pylint_report.txt

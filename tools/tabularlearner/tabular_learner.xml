@@ -55,7 +55,7 @@
                 --probability_threshold '$probability_threshold'
                 #end if
         #end if
-        #if $test_file
+        #if $has_test_file == "yes"
             --test_file '$test_file'
         #end if
         --model_type '$model_type'
@@ -63,12 +63,21 @@
     </command>
     <inputs>
         <param name="input_file" type="data" format="csv,tabular" label="Tabular Input Dataset" />
-        <param name="test_file" type="data" format="csv,tabular" optional="true" label="Tabular Test Dataset"
-        help="If a test dataset is not provided,
-        the input dataset will be split into training, validation, and test sets.
-        If a test set is provided, the input dataset will be split into training and validation sets.
-        Cross-validation is applied by default during training." />
-       <param name="target_feature" multiple="false" type="data_column" use_header_names="true" data_ref="input_file" label="Select the target column:" />
+        <conditional name="test_data_choice">
+            <param name="has_test_file" type="select" label="Do you have a separate test dataset?">
+                <option value="no" selected="true">No</option>
+                <option value="yes">Yes</option>
+            </param>
+            <when value="yes">
+                <param name="test_file" type="data" format="csv,tabular" label="Tabular Test Dataset"
+                       help="If a test dataset is provided, the input dataset will be split into training and validation sets only. 
+                             If not, the tool will split your input into training, validation, and test automatically." />
+            </when>
+            <when value="no">
+                <!-- Nothing extra shown -->
+            </when>
+        </conditional>
+        <param name="target_feature" multiple="false" type="data_column" use_header_names="true" data_ref="input_file" label="Select the target column:" />
         <conditional name="model_selection">
             <param name="model_type" type="select" label="Task">
                 <option value="classification">classification</option>

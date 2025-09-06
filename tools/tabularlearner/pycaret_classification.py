@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 from base_model_trainer import BaseModelTrainer
 from dashboard import generate_classifier_explainer_dashboard
 from pycaret.classification import ClassificationExperiment
-from sklearn.metrics import confusion_matrix, roc_curve, precision_recall_curve, auc
+from sklearn.metrics import auc, confusion_matrix, precision_recall_curve, roc_curve
 from utils import predict_proba
 
 LOG = logging.getLogger(__name__)
@@ -299,4 +299,3 @@ class ClassificationModelTrainer(BaseModelTrainer):
                 return _plot
 
             self.explainer_plots[f"pdp__{feat}"] = make_pdp_plotter(feat)
-

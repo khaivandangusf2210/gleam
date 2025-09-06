@@ -1,4 +1,4 @@
-<tool id="ludwig_experiment" name="Ludwig Experiment" version="@VERSION@" profile="@PROFILE@">
+<tool id="ludwig_experiment" name="Generic Learner Experiment" version="@VERSION@" profile="@PROFILE@">
     <description>trains and evaluates a model</description>
     <macros>
         <import>ludwig_macros.xml</import>
@@ -151,7 +151,7 @@
     <help>
         <![CDATA[
 **What it does**
-Ludwig Experiment: train on one (portion of) dataset and evalue the model performance on another (portion of) dataset.
+Generic Learner Experiment: train on one (portion of) dataset and evalue the model performance on another (portion of) dataset.
 
 
 **Output**

@@ -21,7 +21,7 @@ from constants import (
     SPLIT_COLUMN_NAME,
     TEMP_CONFIG_FILENAME,
     TEMP_CSV_FILENAME,
-    TEMP_DIR_PREFIX
+    TEMP_DIR_PREFIX,
 )
 from ludwig.globals import (
     DESCRIPTION_FILE_NAME,
@@ -38,7 +38,7 @@ from utils import (
     encode_image_to_base64,
     get_html_closing,
     get_html_template,
-    get_metrics_help_modal
+    get_metrics_help_modal,
 )
 
 # --- Logging Setup ---
@@ -168,15 +168,15 @@ def format_config_table_html(
                         val_str = val
             else:
                 val_str = val if val is not None else "N/A"
-            if val_str == "N/A" and key not in [
-                "task_type"
-            ]:  # Skip if N/A for non-essential
+            if val_str == "N/A" and key not in ["task_type"]:
                 continue
         rows.append(
             f"<tr>"
-            f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>"
+            f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left; "
+            f"white-space: normal; word-break: break-word; overflow-wrap: anywhere;'>"
             f"{key.replace('_', ' ').title()}</td>"
-            f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>"
+            f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center; "
+            f"white-space: normal; word-break: break-word; overflow-wrap: anywhere;'>"
             f"{val_str}</td>"
             f"</tr>"
         )
@@ -186,21 +186,18 @@ def format_config_table_html(
         types = [str(a.get("type", "")) for a in aug_cfg]
         aug_val = ", ".join(types)
         rows.append(
-            "<tr>"
-            "<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>Augmentation</td>"
-            "<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>"
-            f"{aug_val}</td>"
-            "</tr>"
+            f"<tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left; "
+            f"white-space: normal; word-break: break-word; overflow-wrap: anywhere;'>Augmentation</td>"
+            f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center; "
+            f"white-space: normal; word-break: break-word; overflow-wrap: anywhere;'>{aug_val}</td></tr>"
         )
 
     if split_info:
         rows.append(
-            f"<tr>"
-            f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left;'>"
-            f"Data Split</td>"
-            f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center;'>"
-            f"{split_info}</td>"
-            f"</tr>"
+            f"<tr><td style='padding: 6px 12px; border: 1px solid #ccc; text-align: left; "
+            f"white-space: normal; word-break: break-word; overflow-wrap: anywhere;'>Data Split</td>"
+            f"<td style='padding: 6px 12px; border: 1px solid #ccc; text-align: center; "
+            f"white-space: normal; word-break: break-word; overflow-wrap: anywhere;'>{split_info}</td></tr>"
         )
 
     html = f"""
@@ -212,7 +209,7 @@ def format_config_table_html(
               <th style="padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Value</th>
             </tr></thead>
             <tbody>
-              {''.join(rows)}
+              {"".join(rows)}
             </tbody>
           </table>
         </div><br>
@@ -323,6 +320,7 @@ def extract_metrics_from_json(
         # 2. Add overall_stats (flattened)
         for k, v in overall_stats.items():
             test_metrics[k] = v
+
         # 3. Optionally include combined/loss if present and not already
         if "loss" in combined_stats and "loss" not in test_metrics:
             test_metrics["loss"] = combined_stats["loss"]
@@ -360,8 +358,10 @@ def format_stats_table_html(train_stats: dict, test_stats: dict, output_type: st
             te = all_metrics["test"].get(metric_key)
             if all(x is not None for x in [t, v, te]):
                 rows.append([display_name, f"{t:.4f}", f"{v:.4f}", f"{te:.4f}"])
+
     if not rows:
         return "<table><tr><td>No metric values found.</td></tr></table>"
+
     html = (
         "<h2 style='text-align: center;'>Model Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
@@ -402,6 +402,7 @@ def format_train_val_stats_table_html(train_stats: dict, test_stats: dict) -> st
 
     if not rows:
         return "<table><tr><td>No metric values found for Train/Validation.</td></tr></table>"
+
     html = (
         "<h2 style='text-align: center;'>Train/Validation Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
@@ -437,6 +438,7 @@ def format_test_merged_stats_table_html(
 
     if not rows:
         return "<table><tr><td>No test metric values found.</td></tr></table>"
+
     html = (
         "<h2 style='text-align: center;'>Test Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
@@ -478,6 +480,7 @@ def split_data_0_2(
             # Force stratify even with fewer samples - adjust validation_size if needed
             min_samples_per_class = label_counts.min()
             if min_samples_per_class * validation_size < 1:
+                # Adjust validation_size to ensure at least 1 sample per class, but do not exceed original validation_size
                 adjusted_validation_size = min(
                     validation_size, 1.0 / min_samples_per_class
                 )
@@ -609,7 +612,6 @@ def create_stratified_random_split(
     logger.info(
         f"Split counts: Train={len(train_idx)}, Val={len(val_idx)}, Test={len(test_idx)}"
     )
-
     return out.astype({split_column: int})
 
 
@@ -840,7 +842,6 @@ class LudwigDirectBackend:
                         logger.info(f"Added resize preprocessing: {height}x{width} for standard encoder with infer_image_dimensions=True and max dimensions")
             except (ValueError, IndexError):
                 logger.warning(f"Invalid image resize format: {config_params['image_resize']}, skipping resize preprocessing")
-
         if task_type == "regression":
             output_feat = {
                 "name": LABEL_COLUMN_NAME,
@@ -999,11 +1000,7 @@ class LudwigDirectBackend:
 
     def generate_plots(self, output_dir: Path) -> None:
         """Generate all Ludwig visualizations for the latest experiment run."""
-        logger.info("Generating visualizations (minimal set)…")
-
-        # Import already available at top of file
-
-        # Keep a minimal set of plots to significantly reduce disk usage
+        logger.info("Generating all Ludwig visualizations…")
         test_plots = {
             "compare_performance",
             "confusion_matrix",
@@ -1116,6 +1113,66 @@ class LudwigDirectBackend:
         test_viz_dir = base_viz_dir / "test"
 
         html = get_html_template()
+
+        # Extra CSS & JS: center Plotly and enable CSV download for predictions table
+        html += """
+<style>
+  /* Center Plotly figures (both wrapper and native classes) */
+  .plotly-center { display: flex; justify-content: center; }
+  .plotly-center .plotly-graph-div, .plotly-center .js-plotly-plot { margin: 0 auto !important; }
+  .js-plotly-plot, .plotly-graph-div { margin-left: auto !important; margin-right: auto !important; }
+
+  /* Download button for predictions table */
+  .download-btn {
+    padding: 8px 12px;
+    border: 1px solid #4CAF50;
+    background: #4CAF50;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .download-btn:hover { filter: brightness(0.95); }
+  .preds-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 8px 0;
+  }
+</style>
+<script>
+  function tableToCSV(table){
+    const rows = Array.from(table.querySelectorAll('tr'));
+    return rows.map(row =>
+      Array.from(row.querySelectorAll('th,td')).map(cell => {
+        let text = cell.innerText.replace(/\\r?\\n|\\r/g,' ').trim();
+        if (text.includes('"') || text.includes(',')) {
+          text = '"' + text.replace(/"/g,'""') + '"';
+        }
+        return text;
+      }).join(',')
+    ).join('\\n');
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    const btn = document.getElementById('downloadPredsCsv');
+    if(btn){
+      btn.addEventListener('click', function(){
+        const tbl = document.querySelector('.predictions-table');
+        if(!tbl){ alert('Predictions table not found.'); return; }
+        const csv = tableToCSV(tbl);
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ground_truth_vs_predictions.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+  });
+</script>
+"""
         html += f"<h1>{title}</h1>"
 
         metrics_html = ""
@@ -1153,25 +1210,34 @@ class LudwigDirectBackend:
         except Exception as e:
             logger.warning(f"Could not load config for HTML report: {e}")
 
+        # ---------- image rendering with exclusions ----------
         def render_img_section(
-            title: str, dir_path: Path, output_type: str = None
+            title: str,
+            dir_path: Path,
+            output_type: str = None,
+            exclude_names: Optional[set] = None,
         ) -> str:
             if not dir_path.exists():
                 return f"<h2>{title}</h2><p><em>Directory not found.</em></p>"
 
+            exclude_names = exclude_names or set()
+
             imgs = list(dir_path.glob("*.png"))
-            # --- EXCLUDE Ludwig's base confusion matrix and any top-N confusion_matrix files ---
+
+            default_exclude = {"confusion_matrix.png", "roc_curves.png"}
+
             imgs = [
                 img
                 for img in imgs
-                if not (
-                    img.name == "confusion_matrix.png"
-                    or img.name.startswith("confusion_matrix__label_top")
-                    or img.name == "roc_curves.png"
-                )
+                if img.name not in default_exclude
+                and img.name not in exclude_names
+                and not img.name.startswith("confusion_matrix__label_top")
             ]
 
-            if title == "Test Visualizations" and output_type == "binary":
+            if not imgs:
+                return f"<h2>{title}</h2><p><em>No plots found.</em></p>"
+
+            if output_type == "binary":
                 order = [
                     "confusion_matrix__label_top2.png",
                     "roc_curves_from_prediction_statistics.png",
@@ -1197,6 +1263,7 @@ class LudwigDirectBackend:
                     "compare_classifiers_multiclass_multimetric__label_top10.png",
                     "compare_classifiers_multiclass_multimetric__label_worst10.png",
                 }
+                valid_imgs = [img for img in imgs if img.name not in unwanted]
                 display_order = [
                     "confusion_matrix__label_top10.png",
                     "roc_curves.png",
@@ -1205,8 +1272,6 @@ class LudwigDirectBackend:
                     "compare_classifiers_multiclass_multimetric__label_sorted.png",
                     "confusion_matrix_entropy__label_top10.png",
                 ]
-                # filter and order
-                valid_imgs = [img for img in imgs if img.name not in unwanted]
                 img_map = {img.name: img for img in valid_imgs}
                 ordered = [img_map[n] for n in display_order if n in img_map]
                 others = sorted(
@@ -1215,36 +1280,37 @@ class LudwigDirectBackend:
                 imgs = ordered + others
 
             else:
-                if output_type == "category":
-                    unwanted = {
-                        "compare_classifiers_multiclass_multimetric__label_best10.png",
-                        "compare_classifiers_multiclass_multimetric__label_top10.png",
-                        "compare_classifiers_multiclass_multimetric__label_worst10.png",
-                    }
-                    imgs = sorted([img for img in imgs if img.name not in unwanted])
-                else:
-                    imgs = sorted(imgs)
+                imgs = sorted(imgs)
 
-            section_html = f"<h2 style='text-align: center;'>{title}</h2><div>"
+            html_section = ""
             for img in imgs:
                 b64 = encode_image_to_base64(str(img))
-                section_html += (
+                img_title = img.stem.replace("_", " ").title()
+                html_section += (
+                    f"<h2 style='text-align: center;'>{img_title}</h2>"
                     f'<div class="plot" style="margin-bottom:20px;text-align:center;">'
                     f"<h3>{img.stem.replace('_', ' ').title()}</h3>"
                     f'<img src="data:image/png;base64,{b64}" '
                     f'style="max-width:90%;max-height:600px;border:1px solid #ddd;" />'
                     f"</div>"
                 )
-            section_html += "</div>"
-            return section_html
+            return html_section
 
         tab1_content = config_html + metrics_html
 
         tab2_content = train_val_metrics_html + render_img_section(
-            "Training & Validation Visualizations", train_viz_dir
+            "Training and Validation Visualizations",
+            train_viz_dir,
+            output_type,
+            exclude_names={
+                "compare_classifiers_performance_from_prob.png",
+                "roc_curves_from_prediction_statistics.png",
+                "precision_recall_curves_from_prediction_statistics.png",
+                "precision_recall_curve.png",
+            },
         )
 
-        # --- Predictions vs Ground Truth table ---
+        # --- Predictions vs Ground Truth table (REGRESSION ONLY) ---
         preds_section = ""
         parquet_path = exp_dir / PREDICTIONS_PARQUET_FILE_NAME
         if parquet_path.exists():
@@ -1266,7 +1332,6 @@ class LudwigDirectBackend:
                 df_gt = df_all[df_all[SPLIT_COLUMN_NAME] == 2][
                     LABEL_COLUMN_NAME
                 ].reset_index(drop=True)
-
                 # 3) concatenate side-by-side
                 df_table = pd.concat([df_gt, df_pred], axis=1)
                 df_table.columns = [LABEL_COLUMN_NAME, "prediction"]
@@ -1274,13 +1339,17 @@ class LudwigDirectBackend:
                 # 4) render as HTML
                 preds_html = df_table.to_html(index=False, classes="predictions-table")
                 preds_section = (
-                    "<h2 style='text-align: center;'>Predictions vs. Ground Truth</h2>"
-                    "<div style='overflow-x:auto; margin-bottom:20px;'>"
+                    "<h2 style='text-align: center;'>Ground Truth vs. Predictions</h2>"
+                    "<div class='preds-controls'>"
+                    "<button id='downloadPredsCsv' class='download-btn'>Download CSV</button>"
+                    "</div>"
+                    "<div class='scroll-rows-30' style='overflow-x:auto; overflow-y:auto; max-height:900px; margin-bottom:20px;'>"
                     + preds_html
                     + "</div>"
                 )
             except Exception as e:
                 logger.warning(f"Could not build Predictions vs GT table: {e}")
+<<<<<<< HEAD
         # Test tab = Metrics + Preds table + Interactive Plotly plots + Visualizations
 
         # Add interactive Plotly plots for classification tasks
@@ -1310,6 +1379,29 @@ class LudwigDirectBackend:
         )
 
         # assemble the tabs and help modal
+=======
+
+        tab3_content = test_metrics_html + preds_section
+
+        # Classification-only interactive Plotly panels (centered)
+        if output_type in ("binary", "category"):
+            training_stats_path = exp_dir / "training_statistics.json"
+            interactive_plots = build_classification_plots(
+                str(test_stats_path),
+                str(training_stats_path),
+            )
+            for plot in interactive_plots:
+                tab3_content += (
+                    f"<h2 style='text-align: center;'>{plot['title']}</h2>"
+                    f"<div class='plotly-center'>{plot['html']}</div>"
+                )
+
+        # Add static TEST PNGs (with default dedupe/exclusions)
+        tab3_content += render_img_section(
+            "Test Visualizations", test_viz_dir, output_type
+        )
+
+>>>>>>> upstream/main
         tabbed_html = build_tabbed_html(tab1_content, tab2_content, tab3_content)
         modal_html = get_metrics_help_modal()
         html += tabbed_html + modal_html + get_html_closing()
@@ -1461,6 +1553,7 @@ class WorkflowOrchestrator:
             )
 
         final_csv = self.temp_dir / TEMP_CSV_FILENAME
+
         try:
 
             df.to_csv(final_csv, index=False)
@@ -1468,8 +1561,55 @@ class WorkflowOrchestrator:
         except Exception:
             logger.error("Error saving prepared CSV", exc_info=True)
             raise
+<<<<<<< HEAD
 
         return final_csv, split_config, split_info
+=======
+
+        return final_csv, split_config, split_info
+
+    def _process_fixed_split(
+        self, df: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, Dict[str, Any], str]:
+        """Process a fixed split column (0=train,1=val,2=test)."""
+        logger.info(f"Fixed split column '{SPLIT_COLUMN_NAME}' detected.")
+        try:
+            col = df[SPLIT_COLUMN_NAME]
+            df[SPLIT_COLUMN_NAME] = pd.to_numeric(col, errors="coerce").astype(
+                pd.Int64Dtype()
+            )
+            if df[SPLIT_COLUMN_NAME].isna().any():
+                logger.warning("Split column contains non-numeric/missing values.")
+
+            unique = set(df[SPLIT_COLUMN_NAME].dropna().unique())
+            logger.info(f"Unique split values: {unique}")
+            if unique == {0, 2}:
+                df = split_data_0_2(
+                    df,
+                    SPLIT_COLUMN_NAME,
+                    validation_size=self.args.validation_size,
+                    label_column=LABEL_COLUMN_NAME,
+                    random_state=self.args.random_seed,
+                )
+                split_info = (
+                    "Detected a split column (with values 0 and 2) in the input CSV. "
+                    f"Used this column as a base and reassigned "
+                    f"{self.args.validation_size * 100:.1f}% "
+                    "of the training set (originally labeled 0) to validation (labeled 1) using stratified sampling."
+                )
+                logger.info("Applied custom 0/2 split.")
+            elif unique.issubset({0, 1, 2}):
+                split_info = "Used user-defined split column from CSV."
+                logger.info("Using fixed split as-is.")
+            else:
+                raise ValueError(f"Unexpected split values: {unique}")
+
+            return df, {"type": "fixed", "column": SPLIT_COLUMN_NAME}, split_info
+
+        except Exception:
+            logger.error("Error processing fixed split", exc_info=True)
+            raise
+>>>>>>> upstream/main
 
     def _cleanup_temp_dirs(self) -> None:
         if self.temp_dir and self.temp_dir.exists():
@@ -1512,6 +1652,7 @@ class WorkflowOrchestrator:
             config_file.write_text(yaml_str)
             logger.info(f"Wrote backend config: {config_file}")
 
+<<<<<<< HEAD
             ran_ok = True
             try:
                 # Run Ludwig experiment with absolute paths to avoid working directory issues
@@ -1561,6 +1702,25 @@ class WorkflowOrchestrator:
                 except Exception as fb_err:
                     logger.error(f"Failed to build fallback outputs: {fb_err}")
                     raise
+=======
+            self.backend.run_experiment(
+                csv_path,
+                config_file,
+                self.args.output_dir,
+                self.args.random_seed,
+            )
+            logger.info("Workflow completed successfully.")
+            self.backend.generate_plots(self.args.output_dir)
+            report_file = self.backend.generate_html_report(
+                "Image Classification Results",
+                self.args.output_dir,
+                backend_args,
+                split_info,
+            )
+            logger.info(f"HTML report generated at: {report_file}")
+            self.backend.convert_parquet_to_csv(self.args.output_dir)
+            logger.info("Converted Parquet to CSV.")
+>>>>>>> upstream/main
         except Exception:
             logger.error("Workflow execution failed", exc_info=True)
             raise
@@ -1757,8 +1917,7 @@ def main():
         action=SplitProbAction,
         default=[0.7, 0.1, 0.2],
         help=(
-            "Random split proportions (e.g., 0.7 0.1 0.2)."
-            "Only used if no split column."
+            "Random split proportions (e.g., 0.7 0.1 0.2).Only used if no split column."
         ),
     )
     parser.add_argument(
@@ -1801,7 +1960,7 @@ def main():
         help=(
             "Decision threshold for binary classification (0.0–1.0)."
             "Overrides default 0.5."
-        )
+        ),
     )
 
     args = parser.parse_args()

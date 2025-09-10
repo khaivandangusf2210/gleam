@@ -1755,13 +1755,7 @@ class ImageLearnerCLI:
                     logger.error(f"Failed to build fallback outputs: {fb_err}")
                     raise
 
-            # Run experiment
-            self.backend.run_experiment(
-                csv_path,
-                config_file,
-                self.args.output_dir,
-                self.args.random_seed,
-            )
+            # Experiment already run above, no need to run again
             logger.info("Workflow completed successfully.")
             self.backend.generate_plots(self.args.output_dir)
             report_file = self.backend.generate_html_report(

@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 import pandas.api.types as ptypes
 import yaml
-from sklearn.model_selection import train_test_split
 
 from constants import (
     IMAGE_PATH_COLUMN_NAME,
@@ -38,6 +37,7 @@ from utils import (
     get_html_template,
     get_metrics_help_modal,
 )
+from sklearn.model_selection import train_test_split
 
 # Set matplotlib backend after imports
 matplotlib.use('Agg')

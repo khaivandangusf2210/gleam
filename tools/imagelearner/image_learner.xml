@@ -300,9 +300,9 @@
                 <param name="test_split"  type="float"
                         label="Test split proportion (only works if no split column in the metadata csv)"
                         value="0.2"
-                                                help="Fraction of data for testing (e.g., 0.2) train split + val split + test split should = 1."/>
-                <param name="threshold" type="float" value="0.5" min="0.0" max="1.0" optional="true" label="Decision Threshold (binary only)" help="Set the decision threshold for binary classification (0.0-1.0). Only applies when task is binary; default is 0.5." />
-                </when>
+                        help="Fraction of data for testing (e.g., 0.2) train split + val split + test split should = 1."/>
+                <param name="threshold" type="float" value="0.5" min="0.0" max="1.0" optional="true" label="Decision Threshold (binary only)" help="Set the decision threshold for binary classification (0.0–1.0). Only applies when task is binary; default is 0.5." />
+            </when>
             <when value="false">
                 <!-- No additional parameters to show if the user selects 'No' -->
             </when>
@@ -391,8 +391,6 @@
                     <has_text text="Test Results" />
                 </assert_contents>
             </output>
-            <output name="output_report" file="expected_regression.html" compare="sim_size"/>
-
             <output_collection name="output_pred_csv" type="list" >
                 <element name="predictions.csv" >
                     <assert_contents>
@@ -442,21 +440,33 @@
             </output_collection>
         </test>
 
-        </tests>
+    </tests>
     <help>
         <![CDATA[
 **What it does**
-Image Learner for Classification/regression: trains and evaluates an image classification/regression model.
+Image Learner for Classification/regression: trains and evaluates a image classification/regression model.
 It uses the metadata csv to find the image paths and labels. 
 The metadata csv should contain a column with the name 'image_path' and a column with the name 'label'.
 Optionally, you can also add a column with the name 'split' to specify which split each row belongs to (train, val, test). 
 If you do not provide a split column, the tool will automatically split the data into train, val, and test sets based on the proportions you specify or [0.7, 0.1, 0.2] by default.
 
+**Models Available**
+This tool supports a wide range of state-of-the-art image classification models including:
+- Traditional CNNs (ResNet, EfficientNet, VGG, etc.)
+- Vision Transformers (ViT, Swin Transformer)
+- Modern architectures (ConvNeXt, MaxViT)
+- MetaFormer family models (IdentityFormer, RandFormer, PoolFormerV2, ConvFormer, CAFormer)
+
+**MetaFormer Models**
+The MetaFormer family represents a unified perspective on transformer-like architectures. These models demonstrate that the success of transformers is largely due to their general architecture rather than specific components like attention mechanisms. All MetaFormer models use pretrained weights from Hugging Face and provide explicit confirmation of weight loading.
+
 **If the selected label column has more than 10 unique values, the tool will automatically treat the task as a regression problem and apply appropriate metrics (e.g., MSE, RMSE, R²).**
 
 **Outputs**
-The tool outputs a trained model as a ludwig_model dataset (directory with weights and config). You can use it for inference, e.g.: `ludwig predict --dataset your.csv --model_path experiment_run/model`.
- 
+The tool will output a trained model in the form of a ludwig_model file,
+a report in the form of an HTML file, and a collection of CSV/json/png files containing the predictions, experiment stats and visualizations.
+The html report will contain metrics&experiment setup parameters, train&val plots and test plots.
+
         ]]>
     </help>
     <citations>

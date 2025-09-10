@@ -55,9 +55,7 @@
                 #if $augmentation
                     --augmentation "$augmentation"
                 #end if
-                #if $image_resize != "original"
-                    --image-resize "$image_resize"
-                #end if
+                --image-resize "$image_resize"
                 --random-seed "$random_seed"
                 --output-dir "." &&
 

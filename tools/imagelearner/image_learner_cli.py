@@ -1349,7 +1349,7 @@ class LudwigDirectBackend:
                 )
             except Exception as e:
                 logger.warning(f"Could not build Predictions vs GT table: {e}")
-<<<<<<< HEAD
+
         # Test tab = Metrics + Preds table + Interactive Plotly plots + Visualizations
 
         # Add interactive Plotly plots for classification tasks
@@ -1379,7 +1379,6 @@ class LudwigDirectBackend:
         )
 
         # assemble the tabs and help modal
-=======
 
         tab3_content = test_metrics_html + preds_section
 
@@ -1401,7 +1400,6 @@ class LudwigDirectBackend:
             "Test Visualizations", test_viz_dir, output_type
         )
 
->>>>>>> upstream/main
         tabbed_html = build_tabbed_html(tab1_content, tab2_content, tab3_content)
         modal_html = get_metrics_help_modal()
         html += tabbed_html + modal_html + get_html_closing()
@@ -1561,55 +1559,10 @@ class WorkflowOrchestrator:
         except Exception:
             logger.error("Error saving prepared CSV", exc_info=True)
             raise
-<<<<<<< HEAD
-
-        return final_csv, split_config, split_info
-=======
 
         return final_csv, split_config, split_info
 
-    def _process_fixed_split(
-        self, df: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, Dict[str, Any], str]:
-        """Process a fixed split column (0=train,1=val,2=test)."""
-        logger.info(f"Fixed split column '{SPLIT_COLUMN_NAME}' detected.")
-        try:
-            col = df[SPLIT_COLUMN_NAME]
-            df[SPLIT_COLUMN_NAME] = pd.to_numeric(col, errors="coerce").astype(
-                pd.Int64Dtype()
-            )
-            if df[SPLIT_COLUMN_NAME].isna().any():
-                logger.warning("Split column contains non-numeric/missing values.")
-
-            unique = set(df[SPLIT_COLUMN_NAME].dropna().unique())
-            logger.info(f"Unique split values: {unique}")
-            if unique == {0, 2}:
-                df = split_data_0_2(
-                    df,
-                    SPLIT_COLUMN_NAME,
-                    validation_size=self.args.validation_size,
-                    label_column=LABEL_COLUMN_NAME,
-                    random_state=self.args.random_seed,
-                )
-                split_info = (
-                    "Detected a split column (with values 0 and 2) in the input CSV. "
-                    f"Used this column as a base and reassigned "
-                    f"{self.args.validation_size * 100:.1f}% "
-                    "of the training set (originally labeled 0) to validation (labeled 1) using stratified sampling."
-                )
-                logger.info("Applied custom 0/2 split.")
-            elif unique.issubset({0, 1, 2}):
-                split_info = "Used user-defined split column from CSV."
-                logger.info("Using fixed split as-is.")
-            else:
-                raise ValueError(f"Unexpected split values: {unique}")
-
-            return df, {"type": "fixed", "column": SPLIT_COLUMN_NAME}, split_info
-
-        except Exception:
-            logger.error("Error processing fixed split", exc_info=True)
-            raise
->>>>>>> upstream/main
+# Removed duplicate method
 
     def _cleanup_temp_dirs(self) -> None:
         if self.temp_dir and self.temp_dir.exists():
@@ -1652,7 +1605,6 @@ class WorkflowOrchestrator:
             config_file.write_text(yaml_str)
             logger.info(f"Wrote backend config: {config_file}")
 
-<<<<<<< HEAD
             ran_ok = True
             try:
                 # Run Ludwig experiment with absolute paths to avoid working directory issues
@@ -1702,7 +1654,8 @@ class WorkflowOrchestrator:
                 except Exception as fb_err:
                     logger.error(f"Failed to build fallback outputs: {fb_err}")
                     raise
-=======
+
+            # Run experiment
             self.backend.run_experiment(
                 csv_path,
                 config_file,
@@ -1720,7 +1673,6 @@ class WorkflowOrchestrator:
             logger.info(f"HTML report generated at: {report_file}")
             self.backend.convert_parquet_to_csv(self.args.output_dir)
             logger.info("Converted Parquet to CSV.")
->>>>>>> upstream/main
         except Exception:
             logger.error("Workflow execution failed", exc_info=True)
             raise

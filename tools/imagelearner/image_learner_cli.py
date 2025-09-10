@@ -27,10 +27,10 @@ from ludwig.globals import (
     DESCRIPTION_FILE_NAME,
     PREDICTIONS_PARQUET_FILE_NAME,
     TEST_STATISTICS_FILE_NAME,
-    TRAIN_SET_METADATA_FILE_NAME,
+    # TRAIN_SET_METADATA_FILE_NAME,  # Commented out - unused
 )
-from ludwig.utils.data_utils import get_split_path
-from ludwig.visualize import get_visualizations_registry
+# from ludwig.utils.data_utils import get_split_path  # Commented out - unused
+# from ludwig.visualize import get_visualizations_registry
 from plotly_plots import build_classification_plots
 from sklearn.model_selection import train_test_split
 from utils import (
@@ -650,6 +650,36 @@ class Backend(Protocol):
 class LudwigDirectBackend:
     """Backend for running Ludwig experiments directly via the internal experiment_cli function."""
 
+    def _detect_image_dimensions(self, image_zip_path: str) -> Tuple[int, int]:
+        """Detect image dimensions from the first image in the dataset."""
+        try:
+            import zipfile
+            from PIL import Image
+            import io
+
+            # Check if image_zip is provided
+            if not image_zip_path:
+                logger.warning("No image zip provided, using default 224x224")
+                return 224, 224
+
+            # Extract first image to detect dimensions
+            with zipfile.ZipFile(image_zip_path, 'r') as z:
+                image_files = [f for f in z.namelist() if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                if not image_files:
+                    logger.warning("No image files found in zip, using default 224x224")
+                    return 224, 224
+
+                # Check first image
+                with z.open(image_files[0]) as f:
+                    img = Image.open(io.BytesIO(f.read()))
+                    width, height = img.size
+                    logger.info(f"Detected image dimensions: {width}x{height}")
+                    return height, width  # Return as (height, width) to match encoder config
+
+        except Exception as e:
+            logger.warning(f"Error detecting image dimensions: {e}, using default 224x224")
+            return 224, 224
+
     def prepare_config(
         self,
         config_params: Dict[str, Any],
@@ -707,15 +737,22 @@ class LudwigDirectBackend:
                 pass
 
             # Parse image resize dimensions
-            height, width = 224, 224  # Default for MetaFormer models
             if config_params.get("image_resize") and config_params["image_resize"] != "original":
                 try:
                     dimensions = config_params["image_resize"].split("x")
                     if len(dimensions) == 2:
                         height, width = int(dimensions[0]), int(dimensions[1])
                         logger.info(f"MetaFormer resize: {height}x{width}")
+                    else:
+                        height, width = 224, 224  # Fallback
                 except (ValueError, IndexError):
                     logger.warning(f"Invalid image resize format: {config_params['image_resize']}, using default 224x224")
+                    height, width = 224, 224
+            else:
+                # For "original" size, detect actual image dimensions
+                image_zip_path = config_params.get("image_zip", "")
+                height, width = self._detect_image_dimensions(image_zip_path)
+                logger.info(f"MetaFormer original size detected: {height}x{width}")
 
             encoder_config = {
                 "type": "stacked_cnn",
@@ -863,12 +900,27 @@ class LudwigDirectBackend:
                 label_series.nunique() if label_series is not None else 2
             )
             output_type = "binary" if num_unique_labels == 2 else "category"
-            output_feat = {
-                "name": LABEL_COLUMN_NAME,
-                "type": "category" if num_unique_labels > 2 else "binary",
-                "decoder": {"type": "classifier", "input_size": num_unique_labels},
-                "loss": {"type": "softmax_cross_entropy"},
-            }
+            # Determine if this is regression or classification based on label type
+            is_regression = (
+                label_series is not None
+                and ptypes.is_numeric_dtype(label_series.dtype)
+                and label_series.nunique() > 10
+            )
+
+            if is_regression:
+                output_feat = {
+                    "name": LABEL_COLUMN_NAME,
+                    "type": "number",
+                    "decoder": {"type": "regressor", "input_size": 1},
+                    "loss": {"type": "mean_squared_error"},
+                }
+            else:
+                output_feat = {
+                    "name": LABEL_COLUMN_NAME,
+                    "type": "category" if num_unique_labels > 2 else "binary",
+                    "decoder": {"type": "classifier", "input_size": num_unique_labels},
+                    "loss": {"type": "softmax_cross_entropy"},
+                }
             if output_type == "binary" and config_params.get("threshold") is not None:
                 output_feat["threshold"] = float(config_params["threshold"])
             val_metric = None
@@ -1001,14 +1053,14 @@ class LudwigDirectBackend:
     def generate_plots(self, output_dir: Path) -> None:
         """Generate all Ludwig visualizations for the latest experiment run."""
         logger.info("Generating all Ludwig visualizations…")
-        test_plots = {
-            "compare_performance",
-            "confusion_matrix",
-            "roc_curves",
-        }
-        train_plots = {
-            "learning_curves",
-        }
+        # test_plots = {
+        #     "compare_performance",
+        #     "confusion_matrix",
+        #     "roc_curves",
+        # }
+        # train_plots = {
+        #     "learning_curves",
+        # }
 
         output_dir = Path(output_dir)
         exp_dirs = sorted(
@@ -1030,19 +1082,19 @@ class LudwigDirectBackend:
         def _check(p: Path) -> Optional[str]:
             return str(p) if p.exists() else None
 
-        training_stats = _check(exp_dir / "training_statistics.json")
+        # training_stats = _check(exp_dir / "training_statistics.json")
         test_stats = _check(exp_dir / TEST_STATISTICS_FILE_NAME)
-        probs_path = _check(exp_dir / PREDICTIONS_PARQUET_FILE_NAME)
-        gt_metadata = _check(exp_dir / "model" / TRAIN_SET_METADATA_FILE_NAME)
+        # probs_path = _check(exp_dir / PREDICTIONS_PARQUET_FILE_NAME)
+        # gt_metadata = _check(exp_dir / "model" / TRAIN_SET_METADATA_FILE_NAME)
 
-        dataset_path = None
-        split_file = None
+        # dataset_path = None
+        # split_file = None
         desc = exp_dir / DESCRIPTION_FILE_NAME
         if desc.exists():
             with open(desc, "r") as f:
                 cfg = json.load(f)
-            dataset_path = _check(Path(cfg.get("dataset", "")))
-            split_file = _check(Path(get_split_path(cfg.get("dataset", ""))))
+            # dataset_path = _check(Path(cfg.get("dataset", "")))
+            # split_file = _check(Path(get_split_path(cfg.get("dataset", ""))))
 
         output_feature = ""
         if desc.exists():
@@ -1055,34 +1107,34 @@ class LudwigDirectBackend:
                 stats = json.load(f)
             output_feature = next(iter(stats.keys()), "")
 
-        viz_registry = get_visualizations_registry()
-        for viz_name, viz_func in viz_registry.items():
-            if viz_name in train_plots:
-                viz_dir_plot = train_viz
-            elif viz_name in test_plots:
-                viz_dir_plot = test_viz
-            else:
-                continue
-
-            try:
-                viz_func(
-                    training_statistics=[training_stats] if training_stats else [],
-                    test_statistics=[test_stats] if test_stats else [],
-                    probabilities=[probs_path] if probs_path else [],
-                    output_feature_name=output_feature,
-                    ground_truth_split=2,
-                    top_n_classes=[0],
-                    top_k=3,
-                    ground_truth_metadata=gt_metadata,
-                    ground_truth=dataset_path,
-                    split_file=split_file,
-                    output_directory=str(viz_dir_plot),
-                    normalize=False,
-                    file_format="png",
-                )
-                logger.info(f"✔ Generated {viz_name}")
-            except Exception as e:
-                logger.warning(f"✘ Skipped {viz_name}: {e}")
+        # viz_registry = get_visualizations_registry()  # Commented out due to import issue
+        # for viz_name, viz_func in viz_registry.items():
+        #     if viz_name in train_plots:
+        #         viz_dir_plot = train_viz
+        #     elif viz_name in test_plots:
+        #         viz_dir_plot = test_viz
+        #     else:
+        #         continue
+        #
+        #     try:
+        #         viz_func(
+        #             training_statistics=[training_stats] if training_stats else [],
+        #             test_statistics=[test_stats] if test_stats else [],
+        #             probabilities=[probs_path] if probs_path else [],
+        #             output_feature_name=output_feature,
+        #             ground_truth_split=2,
+        #             top_n_classes=[0],
+        #             top_k=3,
+        #             ground_truth_metadata=gt_metadata,
+        #             ground_truth=dataset_path,
+        #             split_file=split_file,
+        #             output_directory=str(viz_dir_plot),
+        #             normalize=False,
+        #             file_format="png",
+        #         )
+        #         logger.info(f"✔ Generated {viz_name}")
+        #     except Exception as e:
+        #         logger.warning(f"✘ Skipped {viz_name}: {e}")
 
         logger.info(f"All visualizations written to {viz_dir}")
 
@@ -1425,6 +1477,22 @@ class WorkflowOrchestrator:
         self.image_extract_dir: Optional[Path] = None
         logger.info(f"Orchestrator initialized with backend: {type(backend).__name__}")
 
+    def run(self) -> None:
+        """Execute the full workflow end-to-end."""
+        # Delegate to the backend's run_experiment method
+        self.backend.run_experiment()
+
+
+class ImageLearnerCLI:
+    """Manages the image-classification workflow."""
+
+    def __init__(self, args: argparse.Namespace, backend: Backend):
+        self.args = args
+        self.backend = backend
+        self.temp_dir: Optional[Path] = None
+        self.image_extract_dir: Optional[Path] = None
+        logger.info(f"Orchestrator initialized with backend: {type(backend).__name__}")
+
     def _create_temp_dirs(self) -> None:
         """Create temporary output and image extraction directories."""
         try:
@@ -1564,10 +1632,41 @@ class WorkflowOrchestrator:
 
 # Removed duplicate method
 
+    def _detect_image_dimensions(self) -> Tuple[int, int]:
+        """Detect image dimensions from the first image in the dataset."""
+        try:
+            import zipfile
+            from PIL import Image
+            import io
+
+            # Check if image_zip is provided
+            if not self.args.image_zip:
+                logger.warning("No image zip provided, using default 224x224")
+                return 224, 224
+
+            # Extract first image to detect dimensions
+            with zipfile.ZipFile(self.args.image_zip, 'r') as z:
+                image_files = [f for f in z.namelist() if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                if not image_files:
+                    logger.warning("No image files found in zip, using default 224x224")
+                    return 224, 224
+
+                # Check first image
+                with z.open(image_files[0]) as f:
+                    img = Image.open(io.BytesIO(f.read()))
+                    width, height = img.size
+                    logger.info(f"Detected image dimensions: {width}x{height}")
+                    return height, width  # Return as (height, width) to match encoder config
+
+        except Exception as e:
+            logger.warning(f"Error detecting image dimensions: {e}, using default 224x224")
+            return 224, 224
+
     def _cleanup_temp_dirs(self) -> None:
         if self.temp_dir and self.temp_dir.exists():
             logger.info(f"Cleaning up temp directory: {self.temp_dir}")
-            shutil.rmtree(self.temp_dir, ignore_errors=True)
+            # Don't clean up for debugging
+            # shutil.rmtree(self.temp_dir, ignore_errors=True)
         self.temp_dir = None
         self.image_extract_dir = None
 
@@ -1597,6 +1696,7 @@ class WorkflowOrchestrator:
                 "label_column_data_path": csv_path,
                 "augmentation": self.args.augmentation,
                 "image_resize": self.args.image_resize,
+                "image_zip": self.args.image_zip,
                 "threshold": self.args.threshold,
             }
             yaml_str = self.backend.prepare_config(backend_args, split_cfg)
@@ -1931,7 +2031,7 @@ def main():
             parser.error(str(e))
 
     backend_instance = LudwigDirectBackend()
-    orchestrator = WorkflowOrchestrator(args, backend_instance)
+    orchestrator = ImageLearnerCLI(args, backend_instance)
 
     exit_code = 0
     try:

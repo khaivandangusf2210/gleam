@@ -18,11 +18,11 @@
     </stdio>
     <command>
         <![CDATA[
-            #import re
-            #if $input_csv
-            #set $sanitized_input_csv = re.sub('[^\w\-_\.]', '_', $input_csv.element_identifier.strip())
+            import re
+            if $input_csv
+            set $sanitized_input_csv = re.sub('[^\w\-_\.]', '_', $input_csv.element_identifier.strip())
             ln -sf '$input_csv' "./${sanitized_input_csv}";
-            #end if
+            end if
 
             python '$__tool_directory__/image_learner_cli.py'
                 --csv-file "./${sanitized_input_csv}"

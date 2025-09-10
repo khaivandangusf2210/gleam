@@ -14,8 +14,6 @@ import numpy as np
 import pandas as pd
 import pandas.api.types as ptypes
 import yaml
-from sklearn.model_selection import train_test_split
-
 from constants import (
     IMAGE_PATH_COLUMN_NAME,
     LABEL_COLUMN_NAME,
@@ -31,6 +29,7 @@ from ludwig.globals import (
     TEST_STATISTICS_FILE_NAME,
 )
 from plotly_plots import build_classification_plots
+from sklearn.model_selection import train_test_split
 from utils import (
     build_tabbed_html,
     encode_image_to_base64,

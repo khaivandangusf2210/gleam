@@ -25,9 +25,12 @@ from constants import (
     TEMP_DIR_PREFIX,
 )
 from ludwig.globals import (
+    DESCRIPTION_FILE_NAME,
     PREDICTIONS_PARQUET_FILE_NAME,
     TEST_STATISTICS_FILE_NAME,
+    TRAIN_SET_METADATA_FILE_NAME,
 )
+from ludwig.utils.data_utils import get_split_path
 from plotly_plots import build_classification_plots
 from sklearn.model_selection import train_test_split
 from utils import (
@@ -47,6 +50,19 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("ImageLearner")
+
+# Try to import Ludwig visualization registry (may fail due to optional dependencies)
+# This must come AFTER logger is defined
+_ludwig_viz_available = False
+get_visualizations_registry = None
+try:
+    from ludwig.visualize import get_visualizations_registry
+    _ludwig_viz_available = True
+    logger.info("Ludwig visualizations available")
+except ImportError as e:
+    logger.warning(f"Ludwig visualizations not available: {e}. Will use fallback plots only.")
+except Exception as e:
+    logger.warning(f"Ludwig visualizations not available due to dependency issues: {e}. Will use fallback plots only.")
 
 # --- MetaFormer patching integration ---
 _metaformer_patch_ok = False
@@ -103,9 +119,9 @@ def format_config_table_html(
             resolved_val = None
             if val is None or val == "auto":
                 if training_progress:
-                    resolved_val = training_progress.get("learning_rate")
+                    resolved_val = training_progress.get("batch_size")
                     val = (
-                        "Auto-selected learning rate by Ludwig:<br>"
+                        "Auto-selected batch size by Ludwig:<br>"
                         f"<span style='font-size: 0.85em;'>"
                         f"{resolved_val if resolved_val else val}</span><br>"
                         "<span style='font-size: 0.85em;'>"
@@ -1057,8 +1073,24 @@ class LudwigDirectBackend:
             logger.error(f"Error converting Parquet to CSV: {e}")
 
     def generate_plots(self, output_dir: Path) -> None:
-        """Generate custom matplotlib visualizations for the latest experiment run."""
-        logger.info("Generating custom matplotlib visualizations…")
+        """Generate all Ludwig visualizations for the latest experiment run."""
+        logger.info("Generating visualizations (minimal set)…")
+
+        # Check if Ludwig visualizations are available (handled at module level)
+        if not _ludwig_viz_available or get_visualizations_registry is None:
+            logger.warning("Ludwig visualizations not available; skipping plots")
+            return
+        # Import already available at top of file
+
+        # Keep a minimal set of plots to significantly reduce disk usage
+        test_plots = {
+            "compare_performance",
+            "confusion_matrix",
+            "roc_curves",
+        }
+        train_plots = {
+            "learning_curves",
+        }
 
         output_dir = Path(output_dir)
         exp_dirs = sorted(
@@ -1082,110 +1114,59 @@ class LudwigDirectBackend:
 
         training_stats = _check(exp_dir / "training_statistics.json")
         test_stats = _check(exp_dir / TEST_STATISTICS_FILE_NAME)
-        output_feature = "label"
+        probs_path = _check(exp_dir / PREDICTIONS_PARQUET_FILE_NAME)
+        gt_metadata = _check(exp_dir / "model" / TRAIN_SET_METADATA_FILE_NAME)
 
-        # Generate custom matplotlib plots
-        self._generate_custom_plots(Path(training_stats) if training_stats else None,
-                                    Path(test_stats) if test_stats else None,
-                                    train_viz, test_viz, output_feature)
+        dataset_path = None
+        split_file = None
+        desc = exp_dir / DESCRIPTION_FILE_NAME
+        if desc.exists():
+            with open(desc, "r") as f:
+                cfg = json.load(f)
+            dataset_path = _check(Path(cfg.get("dataset", "")))
+            split_file = _check(Path(get_split_path(cfg.get("dataset", ""))))
+
+        output_feature = ""
+        if desc.exists():
+            try:
+                output_feature = cfg["config"]["output_features"][0]["name"]
+            except Exception:
+                pass
+        if not output_feature and test_stats:
+            with open(test_stats, "r") as f:
+                stats = json.load(f)
+            output_feature = next(iter(stats.keys()), "")
+
+        viz_registry = get_visualizations_registry()
+        for viz_name, viz_func in viz_registry.items():
+            if viz_name in train_plots:
+                viz_dir_plot = train_viz
+            elif viz_name in test_plots:
+                viz_dir_plot = test_viz
+            else:
+                continue
+
+            try:
+                viz_func(
+                    training_statistics=[training_stats] if training_stats else [],
+                    test_statistics=[test_stats] if test_stats else [],
+                    probabilities=[probs_path] if probs_path else [],
+                    output_feature_name=output_feature,
+                    ground_truth_split=2,
+                    top_n_classes=[0],
+                    top_k=3,
+                    ground_truth_metadata=gt_metadata,
+                    ground_truth=dataset_path,
+                    split_file=split_file,
+                    output_directory=str(viz_dir_plot),
+                    normalize=False,
+                    file_format="png",
+                )
+                logger.info(f"✔ Generated {viz_name}")
+            except Exception as e:
+                logger.warning(f"✘ Skipped {viz_name}: {e}")
 
         logger.info(f"All visualizations written to {viz_dir}")
-
-    def _generate_custom_plots(self, training_stats, test_stats, train_viz, test_viz, output_feature):
-        """Generate custom matplotlib plots for training and test visualizations."""
-        import matplotlib.pyplot as plt
-        import matplotlib
-        matplotlib.use('Agg')
-
-        # Generate training/validation plots
-        if training_stats and training_stats.exists():
-            try:
-                with open(training_stats, 'r') as f:
-                    train_data = json.load(f)
-
-                # Extract training and validation loss
-                if 'training' in train_data and 'combined' in train_data['training']:
-                    train_loss = train_data['training']['combined']['loss']
-                    # Look for validation loss in the test section
-                    val_loss = train_data.get('test', {}).get('combined', {}).get('loss', [])
-                    epochs = list(range(1, len(train_loss) + 1))
-
-                    if train_loss and val_loss and len(train_loss) == len(val_loss):
-                        # Plot learning curves
-                        plt.figure(figsize=(10, 6))
-                        plt.plot(epochs, train_loss, 'b-', label='Training Loss', marker='o', linewidth=2)
-                        plt.plot(epochs, val_loss, 'r-', label='Validation Loss', marker='s', linewidth=2)
-                        plt.xlabel('Epoch')
-                        plt.ylabel('Loss')
-                        plt.title('Training and Validation Loss')
-                        plt.legend()
-                        plt.grid(True, alpha=0.3)
-                        plt.xticks(epochs)
-                        plt.tight_layout()
-                        plt.savefig(train_viz / 'learning_curves.png', dpi=300, bbox_inches='tight')
-                        plt.close()
-
-                        logger.info("✔ Generated fallback learning curves")
-
-                # Extract training and validation accuracy if available
-                if 'training' in train_data and 'label' in train_data['training']:
-                    train_acc = train_data['training']['label'].get('accuracy', [])
-                    val_acc = train_data.get('test', {}).get('label', {}).get('accuracy', [])
-
-                    if train_acc and val_acc and len(train_acc) == len(val_acc):
-                        plt.figure(figsize=(10, 6))
-                        plt.plot(epochs, train_acc, 'b-', label='Training Accuracy', marker='o', linewidth=2)
-                        plt.plot(epochs, val_acc, 'r-', label='Validation Accuracy', marker='s', linewidth=2)
-                        plt.xlabel('Epoch')
-                        plt.ylabel('Accuracy')
-                        plt.title('Training and Validation Accuracy')
-                        plt.legend()
-                        plt.grid(True, alpha=0.3)
-                        plt.xticks(epochs)
-                        plt.tight_layout()
-                        plt.savefig(train_viz / 'accuracy_curves.png', dpi=300, bbox_inches='tight')
-                        plt.close()
-
-                        logger.info("✔ Generated fallback accuracy curves")
-
-            except Exception as e:
-                logger.warning(f"✘ Failed to generate training plots: {e}")
-
-        # Generate test plots (disabled - user requested to remove test metrics)
-        # if test_stats and test_stats.exists():
-        #     try:
-        #         with open(test_stats, 'r') as f:
-        #             test_data = json.load(f)
-        #
-        #         # Extract test metrics
-        #         if output_feature in test_data:
-        #             test_loss = test_data[output_feature].get('loss', 0)
-        #             test_acc = test_data[output_feature].get('accuracy', 0)
-        #
-        #             # Plot test metrics as bar chart
-        #             plt.figure(figsize=(8, 6))
-        #             metrics = ['Loss', 'Accuracy']
-        #             values = [test_loss, test_acc]
-        #             colors = ['red', 'green']
-        #
-        #             bars = plt.bar(metrics, values, color=colors, alpha=0.7)
-        #             plt.ylabel('Value')
-        #             plt.title('Test Performance Metrics')
-        #             plt.grid(True, alpha=0.3, axis='y')
-        #
-        #             # Add value labels on bars
-        #             for bar, value in zip(bars, values):
-        #                 plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-        #                         f'{value:.4f}', ha='center', va='bottom')
-        #
-        #             plt.tight_layout()
-        #             plt.savefig(test_viz / 'test_metrics.png', dpi=300, bbox_inches='tight')
-        #             plt.close()
-        #
-        #             logger.info("✔ Generated fallback test metrics")
-        #
-        #     except Exception as e:
-        #         logger.warning(f"✘ Failed to generate test plots: {e}")
 
     def generate_html_report(
         self,
@@ -1211,6 +1192,7 @@ class LudwigDirectBackend:
 
         base_viz_dir = exp_dir / "visualizations"
         train_viz_dir = base_viz_dir / "train"
+        test_viz_dir = base_viz_dir / "test"
 
         html = get_html_template()
 
@@ -1493,10 +1475,10 @@ class LudwigDirectBackend:
                     f"<div class='plotly-center'>{plot['html']}</div>"
                 )
 
-        # Add static TEST PNGs (with default dedupe/exclusions) - DISABLED
-        # tab3_content += render_img_section(
-        #     "Test Visualizations", test_viz_dir, output_type
-        # )
+        # Add static TEST PNGs (with default dedupe/exclusions)
+        tab3_content += render_img_section(
+            "Test Visualizations", test_viz_dir, output_type
+        )
 
         tabbed_html = build_tabbed_html(tab1_content, tab2_content, tab3_content)
         modal_html = get_metrics_help_modal()

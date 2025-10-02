@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import auc, roc_curve
 from sklearn.preprocessing import label_binarize
 
 

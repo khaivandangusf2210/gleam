@@ -823,31 +823,42 @@ class LudwigDirectBackend:
             "type": "image",
         }
         # Set preprocessing dimensions FIRST for MetaFormer models
-        if is_metaformer and config_params.get("image_resize") and config_params["image_resize"] != "original":
-            try:
-                dimensions = config_params["image_resize"].split("x")
-                if len(dimensions) == 2:
-                    height, width = int(dimensions[0]), int(dimensions[1])
+        if is_metaformer:
+            # Get dimensions based on image_resize setting
+            if config_params.get("image_resize") and config_params["image_resize"] != "original":
+                try:
+                    dimensions = config_params["image_resize"].split("x")
+                    if len(dimensions) == 2:
+                        height, width = int(dimensions[0]), int(dimensions[1])
+                        logger.info(f"MetaFormer resize: {height}x{width}")
+                    else:
+                        height, width = 224, 224  # Fallback
+                except (ValueError, IndexError):
+                    logger.warning(f"Invalid image resize format: {config_params['image_resize']}, using default 224x224")
+                    height, width = 224, 224
+            else:
+                # For "original" size, detect actual image dimensions
+                image_zip_path = config_params.get("image_zip", "")
+                height, width = self._detect_image_dimensions(image_zip_path)
+                logger.info(f"MetaFormer original size detected: {height}x{width}")
 
-                    # CRITICAL: Set preprocessing dimensions FIRST for MetaFormer models
-                    # This is essential for MetaFormer models to work properly
-                    if "preprocessing" not in image_feat:
-                        image_feat["preprocessing"] = {}
-                    image_feat["preprocessing"]["height"] = height
-                    image_feat["preprocessing"]["width"] = width
-                    # Use infer_image_dimensions=True to allow Ludwig to read images for validation
-                    # but set explicit max dimensions to control the output size
-                    image_feat["preprocessing"]["infer_image_dimensions"] = True
-                    image_feat["preprocessing"]["infer_image_max_height"] = height
-                    image_feat["preprocessing"]["infer_image_max_width"] = width
-                    image_feat["preprocessing"]["num_channels"] = 3
-                    image_feat["preprocessing"]["resize_method"] = "interpolate"  # Use interpolation for better quality
-                    image_feat["preprocessing"]["standardize_image"] = "imagenet1k"  # Use ImageNet standardization
-                    # Force Ludwig to respect our dimensions by setting additional parameters
-                    image_feat["preprocessing"]["requires_equal_dimensions"] = False
-                    logger.info(f"Set preprocessing dimensions for MetaFormer: {height}x{width} (infer_dimensions=True with max dimensions to allow validation)")
-            except (ValueError, IndexError):
-                logger.warning(f"Invalid image resize format: {config_params['image_resize']}, skipping preprocessing setup")
+            # CRITICAL: Set preprocessing dimensions FIRST for MetaFormer models
+            # This is essential for MetaFormer models to work properly
+            if "preprocessing" not in image_feat:
+                image_feat["preprocessing"] = {}
+            image_feat["preprocessing"]["height"] = height
+            image_feat["preprocessing"]["width"] = width
+            # Use infer_image_dimensions=True to allow Ludwig to read images for validation
+            # but set explicit max dimensions to control the output size
+            image_feat["preprocessing"]["infer_image_dimensions"] = True
+            image_feat["preprocessing"]["infer_image_max_height"] = height
+            image_feat["preprocessing"]["infer_image_max_width"] = width
+            image_feat["preprocessing"]["num_channels"] = 3
+            image_feat["preprocessing"]["resize_method"] = "interpolate"  # Use interpolation for better quality
+            image_feat["preprocessing"]["standardize_image"] = "imagenet1k"  # Use ImageNet standardization
+            # Force Ludwig to respect our dimensions by setting additional parameters
+            image_feat["preprocessing"]["requires_equal_dimensions"] = False
+            logger.info(f"Set preprocessing dimensions for MetaFormer: {height}x{width} (infer_dimensions=True with max dimensions to allow validation)")
         # Now set the encoder configuration
         image_feat["encoder"] = encoder_config
 

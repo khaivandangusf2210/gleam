@@ -182,8 +182,14 @@ def _build_roc_auc_plot(test_stats_path: str, class_labels: List[str], config: d
         df_pred = pd.read_csv(predictions_path)
 
         # Extract probability columns (label_probabilities_0, label_probabilities_1, etc.)
-        prob_cols = [col for col in df_pred.columns if col.startswith('label_probabilities_') and col[-1].isdigit()]
-        prob_cols.sort(key=lambda x: int(x.split('_')[-1]))  # Sort by class number
+        # or label_probabilities_<class_name> for string labels
+        prob_cols = [col for col in df_pred.columns if col.startswith('label_probabilities_') and col != 'label_probabilities']
+
+        # Sort by class number if numeric, otherwise keep alphabetical order
+        if prob_cols and prob_cols[0].split('_')[-1].isdigit():
+            prob_cols.sort(key=lambda x: int(x.split('_')[-1]))
+        else:
+            prob_cols.sort()  # Alphabetical sort for string class names
 
         if not prob_cols:
             return None
@@ -216,8 +222,15 @@ def _build_roc_auc_plot(test_stats_path: str, class_labels: List[str], config: d
 
         y_true = df_test['label'].values
 
+        # Get actual class names from probability column names
+        actual_classes = [col.replace('label_probabilities_', '') for col in prob_cols]
+
         # Binarize the output following sklearn example
-        y_test = label_binarize(y_true, classes=list(range(n_classes)))
+        # Use actual class names if they're strings, otherwise use range
+        if isinstance(y_true[0], str):
+            y_test = label_binarize(y_true, classes=actual_classes)
+        else:
+            y_test = label_binarize(y_true, classes=list(range(n_classes)))
 
         # Handle binary classification case
         if n_classes == 2:
@@ -262,7 +275,8 @@ def _build_roc_auc_plot(test_stats_path: str, class_labels: List[str], config: d
         # Plot ROC curve for each class
         for i in range(n_classes):
             if i in roc_auc:  # Only plot if class exists in test set
-                class_name = class_labels[i] if i < len(class_labels) else f"Class {i}"
+                # Use actual class names from probability columns
+                class_name = actual_classes[i] if i < len(actual_classes) else (class_labels[i] if i < len(class_labels) else f"Class {i}")
                 color = colors[i % len(colors)]
 
                 fig_roc.add_trace(go.Scatter(

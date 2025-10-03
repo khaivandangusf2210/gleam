@@ -30,14 +30,11 @@ RUN pip install --no-cache-dir torch==2.0.0 torchvision==0.15.1 \
 # Install NumPy with a version compatible with PyTorch 2.0.0
 RUN pip install --no-cache-dir numpy==1.24.4
 
-# Install timm for GigaPath tile encoder (critical for compatibility)
-RUN pip install --no-cache-dir timm>=1.0.3
+# Install timm for model support (quote to prevent shell redirection)
+RUN pip install --no-cache-dir 'timm>=1.0.3'
 
-# Install gigapath package for slide encoder
-RUN pip install --no-cache-dir git+https://github.com/prov-gigapath/prov-gigapath.git
-
-# Install remaining Python dependencies
-RUN pip install --no-cache-dir Pillow opencv-python pandas fastparquet argparse logging multiprocessing
+# Install remaining Python dependencies (exclude stdlib packages, add requests for GPFM)
+RUN pip install --no-cache-dir Pillow opencv-python pandas fastparquet requests
 
 # Install HuggingFace transformers for model loading
 RUN pip install --no-cache-dir transformers huggingface-hub

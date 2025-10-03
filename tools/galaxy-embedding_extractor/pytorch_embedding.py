@@ -18,7 +18,6 @@ and conversion.
 
 import argparse
 import csv
-import inspect
 import logging
 import os
 import zipfile
@@ -270,9 +269,17 @@ class GPFMModel(torch.nn.Module):
         with torch.no_grad():
             return self.model(x)
 
-    def get_transformer(self):
+    def get_transformer(self, apply_normalization=True):
         """Get the preprocessing transformer for GPFM."""
-        return self.transformer
+        if apply_normalization:
+            return self.transformer
+        else:
+            # Return transformer without normalization
+            return transforms.Compose([
+                transforms.Lambda(lambda x: x.convert("RGB")),
+                transforms.Resize((224, 224)),
+                transforms.ToTensor()
+            ])
 
 
 # Available models from torchvision
@@ -393,7 +400,7 @@ def load_model(model_name, device):
             return model
 
         # Standard torchvision models
-        if "weights" in inspect.signature(
+        if "weights" in signature(
                 AVAILABLE_MODELS[model_name]).parameters:
             model = AVAILABLE_MODELS[model_name](weights="DEFAULT").to(device)
         else:
@@ -478,10 +485,10 @@ def extract_embeddings(
         if transform_type in ["grayscale", "clahe", "edges", "rgba_to_rgb"]:
             transform = transforms.Compose([
                 initial_transform,
-                model.get_transformer()
+                model.get_transformer(apply_normalization=apply_normalization)
             ])
         else:
-            transform = model.get_transformer()
+            transform = model.get_transformer(apply_normalization=apply_normalization)
     else:
         # Standard torchvision models
         transform_list = [initial_transform,

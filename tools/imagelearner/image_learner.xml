@@ -420,7 +420,9 @@
         <test expect_num_outputs="3">
             <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
             <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
-            <param name="model_name" value="poolformerv2_s24" />
+            <param name="model_name" value="randformer_s12" />
+            <param name="customize_defaults" value="true" />
+            <param name="epochs" value="5" />
             <output name="output_report">
                 <assert_contents>
                     <has_text text="Results Summary" />

@@ -41,7 +41,12 @@ def build_classification_plots(
 
     # 0) Confusion Matrix
     cm = np.array(label_stats["confusion_matrix"], dtype=int)
-    labels = label_stats.get("labels", [str(i) for i in range(cm.shape[0])])
+    # Try to get actual class names from per_class_stats keys (which contain the real labels)
+    pcs = label_stats.get("per_class_stats", {})
+    if pcs:
+        labels = list(pcs.keys())
+    else:
+        labels = label_stats.get("labels", [str(i) for i in range(cm.shape[0])])
     total = cm.sum()
 
     fig_cm = go.Figure(

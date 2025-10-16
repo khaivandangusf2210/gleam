@@ -1084,20 +1084,15 @@ class LudwigDirectBackend:
             logger.error(f"Error converting Parquet to CSV: {e}")
 
     def generate_plots(self, output_dir: Path) -> None:
-        """Generate all Ludwig visualizations for the latest experiment run."""
-        logger.info("Generating visualizations (minimal set)…")
+        """Generate all registered Ludwig visualizations for the latest experiment run."""
+        logger.info("Generating visualizations…")
 
-        # Check if Ludwig visualizations are available (handled at module level)
-        if not _ludwig_viz_available or get_visualizations_registry is None:
-            logger.warning("Ludwig visualizations not available; skipping plots")
-            return
-        # Import already available at top of file
-
-        # Keep a minimal set of plots to significantly reduce disk usage
+        # Comprehensive set of test visualizations
         test_plots = {
             "compare_performance",
+            "compare_classifiers_multiclass_multimetric",  # Generates Best, Sorted, Top, Worst variants
             "confusion_matrix",
-            "roc_curves",
+            "frequency_vs_f1",
         }
         train_plots = {
             "learning_curves",
@@ -1148,7 +1143,27 @@ class LudwigDirectBackend:
                 stats = json.load(f)
             output_feature = next(iter(stats.keys()), "")
 
+        # Dynamically detect number of classes from test statistics
+        num_classes = 10  # Default fallback
+        if test_stats:
+            try:
+                with open(test_stats, "r") as f:
+                    stats = json.load(f)
+                label_stats = stats.get(output_feature, {})
+                per_class_stats = label_stats.get("per_class_stats", {})
+                num_classes = len(per_class_stats)
+                logger.info(f"Detected {num_classes} classes from dataset")
+            except Exception as e:
+                logger.warning(f"Could not detect number of classes: {e}, using default {num_classes}")
+
+        # Limit to top 5 for cleaner visualizations
+        top_classes = min(num_classes, 5)
+        logger.info(f"Using top {top_classes} classes for comparative visualizations")
+
         viz_registry = get_visualizations_registry()
+        generated_count = 0
+        skipped_count = 0
+
         for viz_name, viz_func in viz_registry.items():
             if viz_name in train_plots:
                 viz_dir_plot = train_viz
@@ -1164,7 +1179,7 @@ class LudwigDirectBackend:
                     probabilities=[probs_path] if probs_path else [],
                     output_feature_name=output_feature,
                     ground_truth_split=2,
-                    top_n_classes=[0],
+                    top_n_classes=[top_classes],  # Dynamically set based on number of classes
                     top_k=3,
                     ground_truth_metadata=gt_metadata,
                     ground_truth=dataset_path,
@@ -1174,10 +1189,13 @@ class LudwigDirectBackend:
                     file_format="png",
                 )
                 logger.info(f"✔ Generated {viz_name}")
+                generated_count += 1
             except Exception as e:
-                logger.warning(f"✘ Skipped {viz_name}: {e}")
+                logger.debug(f"✘ Skipped {viz_name}: {str(e)[:100]}")
+                skipped_count += 1
 
-        logger.info(f"All visualizations written to {viz_dir}")
+        logger.info(f"Visualization generation complete: {generated_count} generated, {skipped_count} skipped")
+        logger.info(f"Visualizations written to {viz_dir}")
 
     def generate_html_report(
         self,
@@ -1317,63 +1335,28 @@ class LudwigDirectBackend:
 
             imgs = list(dir_path.glob("*.png"))
 
-            default_exclude = {"roc_curves.png"}  # Only exclude roc_curves, keep confusion_matrix
+            # Exclude ROC curves and standard confusion matrices (keep only entropy version)
+            default_exclude = {
+                "roc_curves.png",  # Remove ROC curves from test tab
+                "confusion_matrix__label_top5.png",  # Remove standard confusion matrix
+                "confusion_matrix__label_top10.png",  # Remove duplicate
+                "confusion_matrix__label_top6.png",   # Remove duplicate
+                "confusion_matrix_entropy__label_top10.png",  # Keep only top5
+                "confusion_matrix_entropy__label_top6.png",   # Keep only top5
+            }
 
             imgs = [
                 img
                 for img in imgs
                 if img.name not in default_exclude
                 and img.name not in exclude_names
-                and not img.name.startswith("confusion_matrix__label_top")
             ]
 
             if not imgs:
                 return f"<h2>{title}</h2><p><em>No plots found.</em></p>"
 
-            if output_type == "binary":
-                order = [
-                    "confusion_matrix__label_top2.png",
-                    "roc_curves_from_prediction_statistics.png",
-                    "compare_performance_label.png",
-                    "confusion_matrix_entropy__label_top2.png",
-                ]
-                img_names = {img.name: img for img in imgs}
-                ordered_imgs = [
-                    img_names[fname] for fname in order if fname in img_names
-                ]
-                remaining = sorted(
-                    [
-                        img
-                        for img in imgs
-                        if img.name not in order and img.name != "roc_curves.png"
-                    ]
-                )
-                imgs = ordered_imgs + remaining
-
-            elif title == "Test Visualizations" and output_type == "category":
-                unwanted = {
-                    "compare_classifiers_multiclass_multimetric__label_best10.png",
-                    "compare_classifiers_multiclass_multimetric__label_top10.png",
-                    "compare_classifiers_multiclass_multimetric__label_worst10.png",
-                }
-                valid_imgs = [img for img in imgs if img.name not in unwanted]
-                display_order = [
-                    "confusion_matrix__label_top10.png",
-                    "roc_curves.png",
-                    "compare_performance_label.png",
-                    "compare_classifiers_performance_from_prob.png",
-                    "compare_classifiers_multiclass_multimetric__label_sorted.png",
-                    "confusion_matrix_entropy__label_top10.png",
-                ]
-                img_map = {img.name: img for img in valid_imgs}
-                ordered = [img_map[n] for n in display_order if n in img_map]
-                others = sorted(
-                    img for img in valid_imgs if img.name not in display_order
-                )
-                imgs = ordered + others
-
-            else:
-                imgs = sorted(imgs)
+            # Sort images by name for consistent ordering (works with string and numeric labels)
+            imgs = sorted(imgs, key=lambda x: x.name)
 
             html_section = ""
             for img in imgs:

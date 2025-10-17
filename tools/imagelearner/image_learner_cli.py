@@ -389,12 +389,12 @@ def format_stats_table_html(train_stats: dict, test_stats: dict, output_type: st
     html = (
         "<h2 style='text-align: center;'>Model Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table style='width: auto; border-collapse: collapse; margin-top: 20px;'>"
+        "<table class='performance-summary' style='border-collapse: collapse;'>"
         "<thead><tr>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Metric</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Train</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Validation</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Test</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Train</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Validation</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Test</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:
@@ -430,11 +430,11 @@ def format_train_val_stats_table_html(train_stats: dict, test_stats: dict) -> st
     html = (
         "<h2 style='text-align: center;'>Train/Validation Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table style='width: auto; border-collapse: collapse; margin-top: 20px;'>"
+        "<table class='performance-summary' style='border-collapse: collapse;'>"
         "<thead><tr>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Metric</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Train</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Validation</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Train</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Validation</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:
@@ -466,10 +466,10 @@ def format_test_merged_stats_table_html(
     html = (
         "<h2 style='text-align: center;'>Test Performance Summary</h2>"
         "<div style='display: flex; justify-content: center;'>"
-        "<table style='width: auto; border-collapse: collapse; margin-top: 20px;'>"
+        "<table class='performance-summary' style='border-collapse: collapse;'>"
         "<thead><tr>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Metric</th>"
-        "<th style='padding: 10px; border: 1px solid #ccc; text-align: center;'>Value</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: left; white-space: nowrap;'>Metric</th>"
+        "<th class='sortable' style='padding: 10px; border: 1px solid #ccc; text-align: center; white-space: nowrap;'>Test</th>"
         "</tr></thead><tbody>"
     )
     for row in rows:

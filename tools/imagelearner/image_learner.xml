@@ -439,6 +439,116 @@
                 </element>
             </output_collection>
         </test>
+        <!-- Test 7: MetaFormer with 384x384 input - verifies model correctly handles non-224x224 dimensions -->
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="caformer_s18_384" />
+            <param name="image_resize" value="384x384" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+                <element name="description.json" >
+                    <assert_contents>
+                        <has_text text="&quot;height&quot;: 384" />
+                        <has_text text="&quot;width&quot;: 384" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <!-- Test 8: Binary classification with custom threshold - verifies ROC curve generation for binary tasks -->
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="binary_classification.csv" ftype="csv" />
+            <param name="image_zip" value="binary_images.zip" ftype="zip" />
+            <param name="model_name" value="resnet18" />
+            <param name="customize_defaults" value="true" />
+            <param name="threshold" value="0.6" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                    <has_text text="ROC-AUC Curves" />
+                </assert_contents>
+            </output>
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+                <element name="test_statistics.json" >
+                    <assert_contents>
+                        <has_text text="&quot;roc_auc&quot;" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <!-- Test 9: PoolFormerV2 model configuration - verifies custom_model parameter persists in config -->
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="poolformerv2_s12" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+                <element name="description.json" >
+                    <assert_contents>
+                        <has_text text="&quot;custom_model&quot;: &quot;poolformerv2_s12&quot;" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <!-- Test 10: Multi-class classification with ROC curves - verifies robust ROC-AUC plot generation -->
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="resnet18" />
+            <param name="customize_defaults" value="true" />
+            <param name="epochs" value="3" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                    <has_text text="ROC-AUC Curves" />
+                    <has_text text="Micro-average ROC" />
+                </assert_contents>
+            </output>
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+                <element name="test_statistics.json" >
+                    <assert_contents>
+                        <has_text text="&quot;confusion_matrix&quot;" />
+                        <has_text text="&quot;per_class_stats&quot;" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
     </tests>
     <help>
         <![CDATA[

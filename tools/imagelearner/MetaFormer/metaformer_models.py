@@ -296,25 +296,29 @@ class RandomMixing(nn.Module):
     def __init__(self, num_tokens=196, **kwargs):
         super().__init__()
         self.num_tokens = num_tokens
-        # Initialize with default size, but we'll recreate dynamically if needed
-        self.random_matrix = nn.parameter.Parameter(
-            data=torch.softmax(torch.rand(num_tokens, num_tokens), dim=-1),
-            requires_grad=False)
+        base_matrix = torch.softmax(torch.rand(num_tokens, num_tokens), dim=-1)
+        self.register_buffer("random_matrix", base_matrix, persistent=True)
 
     def forward(self, x):
         B, H, W, C = x.shape
         actual_tokens = H * W
 
-        # If the actual number of tokens doesn't match our matrix size, recreate it
-        if actual_tokens != self.random_matrix.shape[0]:
-            # Create new random matrix with correct size and move to same device
-            device = self.random_matrix.device
-            new_matrix = torch.softmax(torch.rand(actual_tokens, actual_tokens, device=device), dim=-1)
-            # Update the parameter (note: this is for inference/dynamic sizing)
-            with torch.no_grad():
-                self.random_matrix.data = new_matrix
+        if actual_tokens == self.random_matrix.shape[0]:
+            mixing = self.random_matrix
+        else:
+            base = self.random_matrix
+            if base.device != x.device:
+                base = base.to(x.device)
+            resized = F.interpolate(
+                base.unsqueeze(0).unsqueeze(0),
+                size=(actual_tokens, actual_tokens),
+                mode='bilinear',
+                align_corners=False,
+            ).squeeze(0).squeeze(0)
+            mixing = torch.softmax(resized, dim=-1)
+
         x = x.reshape(B, actual_tokens, C)
-        x = torch.einsum('mn, bnc -> bmc', self.random_matrix, x)
+        x = torch.einsum('mn, bnc -> bmc', mixing, x)
         x = x.reshape(B, H, W, C)
         return x
 

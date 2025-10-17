@@ -68,6 +68,18 @@ class MetaFormerStackedCNN(nn.Module):
         print("MetaFormerStackedCNN encoder instantiated")
         print(f"Using MetaFormer model: {custom_model}")
 
+        try:
+            height = int(height)
+            width = int(width)
+            num_channels = int(num_channels)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("MetaFormerStackedCNN requires integer height, width, and num_channels.") from exc
+
+        if height <= 0 or width <= 0:
+            raise ValueError(f"MetaFormerStackedCNN received non-positive dimensions: {height}x{width}.")
+        if num_channels <= 0:
+            raise ValueError(f"MetaFormerStackedCNN requires num_channels > 0, received {num_channels}.")
+
         self.height = height
         self.width = width
         self.num_channels = num_channels
@@ -76,21 +88,48 @@ class MetaFormerStackedCNN(nn.Module):
         self.use_pretrained = use_pretrained
         self.trainable = trainable
 
-        logger.info(f"Initializing MetaFormerStackedCNN with model: {custom_model}")
-        logger.info(f"Input: {num_channels}x{height}x{width} -> Output: {output_size}")
-
-        self.channel_adapter = None
-        if num_channels != 3:
-            self.channel_adapter = nn.Conv2d(num_channels, 3, kernel_size=1, stride=1, padding=0)
-            logger.info(f"Added channel adapter: {num_channels} -> 3 channels")
-
-        self.size_adapter = None
-        if height != 224 or width != 224:
-            self.size_adapter = nn.AdaptiveAvgPool2d((224, 224))
-            logger.info(f"Added size adapter: {height}x{width} -> 224x224")
+        cfg = META_DEFAULT_CFGS.get(custom_model, {})
+        input_size = cfg.get('input_size', (3, 224, 224))
+        if isinstance(input_size, (list, tuple)) and len(input_size) == 3:
+            expected_channels, expected_height, expected_width = input_size
         else:
-            # For 224x224, we can use the model as-is
-            logger.info(f"Using MetaFormer model with {height}x{width} input size")
+            expected_channels, expected_height, expected_width = 3, 224, 224
+
+        self.expected_channels = expected_channels
+        self.expected_height = expected_height
+        self.expected_width = expected_width
+
+        logger.info(f"Initializing MetaFormerStackedCNN with model: {custom_model}")
+        logger.info(
+            "Input: %sx%sx%s -> Output: %s (expected backbone size: %sx%s)",
+            num_channels,
+            height,
+            width,
+            output_size,
+            self.expected_height,
+            self.expected_width,
+        )
+
+        self.channel_adapter: Optional[nn.Conv2d] = None
+        if num_channels != self.expected_channels:
+            self.channel_adapter = nn.Conv2d(
+                num_channels, self.expected_channels, kernel_size=1, stride=1, padding=0
+            )
+            logger.info(
+                "Added channel adapter: %s -> %s channels",
+                num_channels,
+                self.expected_channels,
+            )
+
+        self.size_adapter: Optional[nn.Module] = None
+        if height != self.expected_height or width != self.expected_width:
+            self.size_adapter = nn.AdaptiveAvgPool2d((height, width))
+            logger.info(
+                "Configured size adapter to requested input: %sx%s",
+                height,
+                width,
+            )
+        self.backbone_adapter: Optional[nn.Module] = None
 
         self.backbone = self._load_metaformer_backbone()
         self.feature_dim = self._get_feature_dim()
@@ -236,31 +275,60 @@ class MetaFormerStackedCNN(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        if x.shape[1] != 3:
-            if self.channel_adapter is None:
-                self.channel_adapter = nn.Conv2d(x.shape[1], 3, kernel_size=1, stride=1, padding=0).to(x.device)
-                logger.info(f"Created dynamic channel adapter: {x.shape[1]} -> 3 channels")
+        if x.shape[1] != self.expected_channels:
+            if (
+                self.channel_adapter is None
+                or self.channel_adapter.in_channels != x.shape[1]
+                or self.channel_adapter.out_channels != self.expected_channels
+            ):
+                self.channel_adapter = nn.Conv2d(
+                    x.shape[1],
+                    self.expected_channels,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                ).to(x.device)
+                logger.info(
+                    "Created dynamic channel adapter: %s -> %s channels",
+                    x.shape[1],
+                    self.expected_channels,
+                )
             x = self.channel_adapter(x)
 
-        # Handle size adaptation based on configured dimensions
         target_height, target_width = self.height, self.width
         if x.shape[2] != target_height or x.shape[3] != target_width:
-            if self.size_adapter is None:
-                # If we need to resize to something other than 224x224, create appropriate adapter
-                if target_height != 224 or target_width != 224:
-                    self.size_adapter = nn.AdaptiveAvgPool2d((target_height, target_width))
-                    logger.info(f"Created size adapter: {x.shape[2]}x{x.shape[3]} -> {target_height}x{target_width}")
-                else:
-                    self.size_adapter = nn.AdaptiveAvgPool2d((224, 224))
-                    logger.info(f"Created size adapter: {x.shape[2]}x{x.shape[3]} -> 224x224")
+            if (
+                self.size_adapter is None
+                or getattr(self.size_adapter, "output_size", None)
+                != (target_height, target_width)
+            ):
+                self.size_adapter = nn.AdaptiveAvgPool2d(
+                    (target_height, target_width)
+                ).to(x.device)
+                logger.info(
+                    "Created size adapter: %sx%s -> %sx%s",
+                    x.shape[2],
+                    x.shape[3],
+                    target_height,
+                    target_width,
+                )
             x = self.size_adapter(x)
 
-        # For MetaFormer models, we need to ensure input is 224x224 for the backbone
-        if target_height != 224 or target_width != 224:
-            # If target size is not 224x224, we need to resize to 224x224 for the backbone
-            backbone_adapter = nn.AdaptiveAvgPool2d((224, 224))
-            x = backbone_adapter(x)
-            logger.debug("Resized to 224x224 for MetaFormer backbone")
+        if target_height != self.expected_height or target_width != self.expected_width:
+            if (
+                self.backbone_adapter is None
+                or getattr(self.backbone_adapter, "output_size", None)
+                != (self.expected_height, self.expected_width)
+            ):
+                self.backbone_adapter = nn.AdaptiveAvgPool2d(
+                    (self.expected_height, self.expected_width)
+                ).to(x.device)
+                logger.info(
+                    "Aligning to MetaFormer backbone size: %sx%s",
+                    self.expected_height,
+                    self.expected_width,
+                )
+            x = self.backbone_adapter(x)
 
         features = self.backbone.forward_features(x)
         output = self.fc_layers(features)
@@ -293,48 +361,50 @@ def patch_ludwig_direct():
         from ludwig.encoders.image.base import Stacked2DCNN
         original_stacked_cnn_init = Stacked2DCNN.__init__
 
-        # Store custom_model in a global variable during config preparation
-        getattr(patch_ludwig_direct, '_metaformer_model', None)
-
         def patched_stacked_cnn_init(self, *args, **kwargs):
-            custom_model = getattr(patch_ludwig_direct, '_metaformer_model', None)
+            custom_model = kwargs.pop("custom_model", None)
+            if custom_model is None:
+                custom_model = getattr(patch_ludwig_direct, '_metaformer_model', None)
 
-            # Intercept only if MetaFormer models are available and requested
-            if META_MODELS_AVAILABLE and _is_supported_metaformer(custom_model):
-                print(f"DETECTED MetaFormer model: {custom_model}")
-                print("MetaFormer encoder is being loaded and used.")
-                # Initialize base class to keep Ludwig internals intact
-                original_stacked_cnn_init(self, *args, **kwargs)
-                # Create our MetaFormer encoder and graft behavior
-                mf_encoder = create_metaformer_stacked_cnn(custom_model, **kwargs)
-                # ensure base attributes won't be used accidentally
-                for attr in ("conv_layers", "fc_layers", "combiner", "output_shape", "reduce_output"):
-                    if hasattr(self, attr):
-                        try:
-                            setattr(self, attr, getattr(mf_encoder, attr, None))
-                        except Exception:
-                            pass
-                self.forward = mf_encoder.forward
-                if hasattr(mf_encoder, 'backbone'):
-                    self.backbone = mf_encoder.backbone
-                if hasattr(mf_encoder, 'fc_layers'):
-                    self.fc_layers = mf_encoder.fc_layers
-                if hasattr(mf_encoder, 'custom_model'):
-                    self.custom_model = mf_encoder.custom_model
-                # explicit confirmation logs
-                try:
-                    url_info = getattr(mf_encoder, '_loaded_weights_url', None)
-                    loaded_flag = getattr(mf_encoder, '_pretrained_loaded', False)
-                    if loaded_flag and url_info:
-                        print(f"CONFIRMED: MetaFormer '{custom_model}' using pretrained weights from: {url_info}")
-                        logger.info(f"CONFIRMED: MetaFormer '{custom_model}' using pretrained weights from: {url_info}")
-                    else:
-                        print(f"CONFIRMED: MetaFormer '{custom_model}' using randomly initialized weights (no pretrained)")
-                        logger.info(f"CONFIRMED: MetaFormer '{custom_model}' using randomly initialized weights")
-                except Exception:
-                    pass
-            else:
-                original_stacked_cnn_init(self, *args, **kwargs)
+            try:
+                if META_MODELS_AVAILABLE and _is_supported_metaformer(custom_model):
+                    print(f"DETECTED MetaFormer model: {custom_model}")
+                    print("MetaFormer encoder is being loaded and used.")
+                    # Initialize base class to keep Ludwig internals intact
+                    original_stacked_cnn_init(self, *args, **kwargs)
+                    # Create our MetaFormer encoder and graft behavior
+                    mf_encoder = create_metaformer_stacked_cnn(custom_model, **kwargs)
+                    # ensure base attributes won't be used accidentally
+                    for attr in ("conv_layers", "fc_layers", "combiner", "output_shape", "reduce_output"):
+                        if hasattr(self, attr):
+                            try:
+                                setattr(self, attr, getattr(mf_encoder, attr, None))
+                            except Exception:
+                                pass
+                    self.forward = mf_encoder.forward
+                    if hasattr(mf_encoder, 'backbone'):
+                        self.backbone = mf_encoder.backbone
+                    if hasattr(mf_encoder, 'fc_layers'):
+                        self.fc_layers = mf_encoder.fc_layers
+                    if hasattr(mf_encoder, 'custom_model'):
+                        self.custom_model = mf_encoder.custom_model
+                    # explicit confirmation logs
+                    try:
+                        url_info = getattr(mf_encoder, '_loaded_weights_url', None)
+                        loaded_flag = getattr(mf_encoder, '_pretrained_loaded', False)
+                        if loaded_flag and url_info:
+                            print(f"CONFIRMED: MetaFormer '{custom_model}' using pretrained weights from: {url_info}")
+                            logger.info(f"CONFIRMED: MetaFormer '{custom_model}' using pretrained weights from: {url_info}")
+                        else:
+                            print(f"CONFIRMED: MetaFormer '{custom_model}' using randomly initialized weights (no pretrained)")
+                            logger.info(f"CONFIRMED: MetaFormer '{custom_model}' using randomly initialized weights")
+                    except Exception:
+                        pass
+                else:
+                    original_stacked_cnn_init(self, *args, **kwargs)
+            finally:
+                if hasattr(patch_ludwig_direct, '_metaformer_model'):
+                    patch_ludwig_direct._metaformer_model = None
 
         Stacked2DCNN.__init__ = patched_stacked_cnn_init
         return True
@@ -345,4 +415,10 @@ def patch_ludwig_direct():
 
 def set_current_metaformer_model(model_name: str):
     """Store the current MetaFormer model name for the patch to use."""
-    patch_ludwig_direct._metaformer_model = model_name
+    setattr(patch_ludwig_direct, '_metaformer_model', model_name)
+
+
+def clear_current_metaformer_model():
+    """Remove any cached MetaFormer model hint."""
+    if hasattr(patch_ludwig_direct, '_metaformer_model'):
+        delattr(patch_ludwig_direct, '_metaformer_model')

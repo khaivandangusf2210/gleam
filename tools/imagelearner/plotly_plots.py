@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
+from constants import LABEL_COLUMN_NAME, SPLIT_COLUMN_NAME
 from sklearn.metrics import auc, roc_curve
 from sklearn.preprocessing import label_binarize
 
@@ -186,6 +187,15 @@ def _build_roc_auc_plot(test_stats_path: str, class_labels: List[str], config: d
 
         df_pred = pd.read_csv(predictions_path)
 
+        if SPLIT_COLUMN_NAME in df_pred.columns:
+            split_series = df_pred[SPLIT_COLUMN_NAME].astype(str).str.lower()
+            test_mask = split_series.isin({"2", "test", "testing"})
+            if test_mask.any():
+                df_pred = df_pred[test_mask].reset_index(drop=True)
+
+        if df_pred.empty:
+            return None
+
         # Extract probability columns (label_probabilities_0, label_probabilities_1, etc.)
         # or label_probabilities_<class_name> for string labels
         prob_cols = [col for col in df_pred.columns if col.startswith('label_probabilities_') and col != 'label_probabilities']
@@ -203,32 +213,66 @@ def _build_roc_auc_plot(test_stats_path: str, class_labels: List[str], config: d
         y_score = df_pred[prob_cols].values
         n_classes = len(prob_cols)
 
-        # We need the true labels for the test set
-        # Try to find the original dataset path from description.json
-        desc_path = exp_dir / "description.json"
-        if not desc_path.exists():
+        y_true = None
+        candidate_cols = [
+            LABEL_COLUMN_NAME,
+            f"{LABEL_COLUMN_NAME}_ground_truth",
+            f"{LABEL_COLUMN_NAME}__ground_truth",
+            f"{LABEL_COLUMN_NAME}_target",
+            f"{LABEL_COLUMN_NAME}__target",
+        ]
+        candidate_cols.extend(
+            [
+                col
+                for col in df_pred.columns
+                if (col.startswith(f"{LABEL_COLUMN_NAME}_") or col.startswith(f"{LABEL_COLUMN_NAME}__"))
+                and "probabilities" not in col
+                and "predictions" not in col
+            ]
+        )
+        for col in candidate_cols:
+            if col in df_pred.columns and col not in prob_cols:
+                y_true = df_pred[col].values
+                break
+
+        if y_true is None:
+            desc_path = exp_dir / "description.json"
+            if desc_path.exists():
+                try:
+                    with open(desc_path, 'r') as f:
+                        desc = json.load(f)
+                    dataset_path = desc.get('dataset', '')
+                    if dataset_path and Path(dataset_path).exists():
+                        df_orig = pd.read_csv(dataset_path)
+                        if SPLIT_COLUMN_NAME in df_orig.columns:
+                            df_orig = df_orig[df_orig[SPLIT_COLUMN_NAME] == 2].reset_index(drop=True)
+                        if LABEL_COLUMN_NAME in df_orig.columns:
+                            y_true = df_orig[LABEL_COLUMN_NAME].values
+                            if len(y_true) != len(df_pred):
+                                print(
+                                    f"Warning: Test set size mismatch. Truncating to {len(df_pred)} samples for ROC plot."
+                                )
+                                y_true = y_true[:len(df_pred)]
+                    else:
+                        print("Warning: Original dataset referenced in description.json is unavailable.")
+                except Exception as exc:  # pragma: no cover - defensive
+                    print(f"Warning: Failed to recover labels from dataset: {exc}")
+
+        if y_true is None or len(y_true) == 0:
+            print("Warning: Unable to locate ground-truth labels for ROC plot.")
             return None
 
-        with open(desc_path, 'r') as f:
-            desc = json.load(f)
-
-        dataset_path = desc.get('dataset', '')
-        if not dataset_path or not Path(dataset_path).exists():
-            return None
-
-        # Load original dataset and filter for test set (split == 2)
-        df_orig = pd.read_csv(dataset_path)
-        df_test = df_orig[df_orig['split'] == 2].reset_index(drop=True)
-
-        if len(df_test) != len(df_pred):
-            # Fallback: assume test set is in the same order as predictions
-            print(f"Warning: Test set size mismatch. Using first {len(df_pred)} test samples.")
-            df_test = df_test.head(len(df_pred))
-
-        y_true = df_test['label'].values
+        if len(y_true) != len(y_score):
+            limit = min(len(y_true), len(y_score))
+            if limit == 0:
+                return None
+            print(f"Warning: Aligning prediction and label lengths to {limit} samples for ROC plot.")
+            y_true = y_true[:limit]
+            y_score = y_score[:limit]
 
         # Get actual class names from probability column names
         actual_classes = [col.replace('label_probabilities_', '') for col in prob_cols]
+        display_classes = class_labels if len(class_labels) == n_classes else actual_classes
 
         # Binarize the output following sklearn example
         # Use actual class names if they're strings, otherwise use range
@@ -238,8 +282,18 @@ def _build_roc_auc_plot(test_stats_path: str, class_labels: List[str], config: d
             y_test = label_binarize(y_true, classes=list(range(n_classes)))
 
         # Handle binary classification case
+        if y_test.ndim != 2:
+            y_test = np.atleast_2d(y_test)
+
         if n_classes == 2:
-            y_test = np.hstack([1 - y_test, y_test])
+            if y_test.shape[1] == 1:
+                y_test = np.hstack([1 - y_test, y_test])
+            elif y_test.shape[1] != 2:
+                print("Warning: Unexpected label binarization shape for binary ROC plot.")
+                return None
+        elif y_test.shape[1] != n_classes:
+            print("Warning: Label binarization did not produce expected class dimension; skipping ROC plot.")
+            return None
 
         # Compute ROC curve and ROC area for each class (following sklearn example)
         fpr = dict()
@@ -280,8 +334,7 @@ def _build_roc_auc_plot(test_stats_path: str, class_labels: List[str], config: d
         # Plot ROC curve for each class
         for i in range(n_classes):
             if i in roc_auc:  # Only plot if class exists in test set
-                # Use actual class names from probability columns
-                class_name = actual_classes[i] if i < len(actual_classes) else (class_labels[i] if i < len(class_labels) else f"Class {i}")
+                class_name = display_classes[i] if i < len(display_classes) else f"Class {i}"
                 color = colors[i % len(colors)]
 
                 fig_roc.add_trace(go.Scatter(

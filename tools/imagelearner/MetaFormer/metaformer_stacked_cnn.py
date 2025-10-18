@@ -69,8 +69,8 @@ class MetaFormerStackedCNN(nn.Module):
         **kwargs,
     ):
         super().__init__()
-        print("MetaFormerStackedCNN encoder instantiated")
-        print(f"Using MetaFormer model: {custom_model}")
+        logger.info("MetaFormerStackedCNN encoder instantiated")
+        logger.info(f"Using MetaFormer model: {custom_model}")
 
         try:
             height = int(height)

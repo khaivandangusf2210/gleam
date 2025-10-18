@@ -13,6 +13,7 @@ from torch.nn.init import trunc_normal_  # use torch's built-in truncated normal
 
 logger = logging.getLogger(__name__)
 
+
 def to_2tuple(v):
     if isinstance(v, (list, tuple)):
         return tuple(v)

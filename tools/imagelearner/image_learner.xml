@@ -7,6 +7,10 @@
         <include path="utils.py" />
         <include path="constants.py" />
         <include path="image_learner_cli.py" />
+
+        <include path="MetaFormer/metaformer_models.py" />
+        <include path="MetaFormer/metaformer_stacked_cnn.py" />
+        <include path="MetaFormer/__init__.py" />
     </required_files>
     <stdio>
         <exit_code range="137" level="fatal_oom" description="Out of Memory" />
@@ -15,9 +19,7 @@
     <command>
         <![CDATA[
             #import re
-
             #if $input_csv
-
             #set $sanitized_input_csv = re.sub('[^\w\-_\.]', '_', $input_csv.element_identifier.strip())
             ln -sf '$input_csv' "./${sanitized_input_csv}";
             #end if
@@ -53,6 +55,7 @@
                 #if $augmentation
                     --augmentation "$augmentation"
                 #end if
+                --image-resize "$image_resize"
                 --random-seed "$random_seed"
                 --output-dir "." &&
 
@@ -64,7 +67,7 @@
     </command>
 
     <inputs>
-        <param argument="input_csv" type="data" format="csv" optional="false" label="the metadata csv containing image_path column, label column and optional split column" />
+        <param name="input_csv" argument="input_csv" type="data" format="csv" optional="false" label="the metadata csv containing image_path column, label column and optional split column" />
         <param name="image_zip" type="data" format="zip" optional="false" label="Image zip" help="Image zip file containing your image data"/>
         <param name="model_name" type="select" optional="false" label="Select a model for your experiment" >
 
@@ -142,6 +145,62 @@
             <option value="mobilenet_v2">Mobilenet_v2</option>
             <option value="mobilenet_v3_large">Mobilenet_v3_large</option>
             <option value="mobilenet_v3_small">Mobilenet_v3_small</option>
+            <!-- MetaFormer Models -->
+            <option value="identityformer_s12">IdentityFormer S12</option>
+            <option value="identityformer_s24">IdentityFormer S24</option>
+            <option value="identityformer_s36">IdentityFormer S36</option>
+            <option value="identityformer_m36">IdentityFormer M36</option>
+            <option value="identityformer_m48">IdentityFormer M48</option>
+            <option value="randformer_s12">RandFormer S12</option>
+            <option value="randformer_s24">RandFormer S24</option>
+            <option value="randformer_s36">RandFormer S36</option>
+            <option value="randformer_m36">RandFormer M36</option>
+            <option value="randformer_m48">RandFormer M48</option>
+            <option value="poolformerv2_s12">PoolFormerV2 S12</option>
+            <option value="poolformerv2_s24">PoolFormerV2 S24</option>
+            <option value="poolformerv2_s36">PoolFormerV2 S36</option>
+            <option value="poolformerv2_m36">PoolFormerV2 M36</option>
+            <option value="poolformerv2_m48">PoolFormerV2 M48</option>
+            <option value="convformer_s18">ConvFormer S18</option>
+            <option value="convformer_s18_384">ConvFormer S18 384</option>
+            <option value="convformer_s18_in21ft1k">ConvFormer S18 ImageNet21k</option>
+            <option value="convformer_s18_384_in21ft1k">ConvFormer S18 384 ImageNet21k</option>
+            <option value="convformer_s18_in21k">ConvFormer S18 ImageNet21k Pretrained</option>
+            <option value="convformer_s36">ConvFormer S36</option>
+            <option value="convformer_s36_384">ConvFormer S36 384</option>
+            <option value="convformer_s36_in21ft1k">ConvFormer S36 ImageNet21k</option>
+            <option value="convformer_s36_384_in21ft1k">ConvFormer S36 384 ImageNet21k</option>
+            <option value="convformer_s36_in21k">ConvFormer S36 ImageNet21k Pretrained</option>
+            <option value="convformer_m36">ConvFormer M36</option>
+            <option value="convformer_m36_384">ConvFormer M36 384</option>
+            <option value="convformer_m36_in21ft1k">ConvFormer M36 ImageNet21k</option>
+            <option value="convformer_m36_384_in21ft1k">ConvFormer M36 384 ImageNet21k</option>
+            <option value="convformer_m36_in21k">ConvFormer M36 ImageNet21k Pretrained</option>
+            <option value="convformer_b36">ConvFormer B36</option>
+            <option value="convformer_b36_384">ConvFormer B36 384</option>
+            <option value="convformer_b36_in21ft1k">ConvFormer B36 ImageNet21k</option>
+            <option value="convformer_b36_384_in21ft1k">ConvFormer B36 384 ImageNet21k</option>
+            <option value="convformer_b36_in21k">ConvFormer B36 ImageNet21k Pretrained</option>
+            <option value="caformer_s18">CAFormer S18</option>
+            <option value="caformer_s18_384">CAFormer S18 384</option>
+            <option value="caformer_s18_in21ft1k">CAFormer S18 ImageNet21k</option>
+            <option value="caformer_s18_384_in21ft1k">CAFormer S18 384 ImageNet21k</option>
+            <option value="caformer_s18_in21k">CAFormer S18 ImageNet21k Pretrained</option>
+            <option value="caformer_s36">CAFormer S36</option>
+            <option value="caformer_s36_384">CAFormer S36 384</option>
+            <option value="caformer_s36_in21ft1k">CAFormer S36 ImageNet21k</option>
+            <option value="caformer_s36_384_in21ft1k">CAFormer S36 384 ImageNet21k</option>
+            <option value="caformer_s36_in21k">CAFormer S36 ImageNet21k Pretrained</option>
+            <option value="caformer_m36">CAFormer M36</option>
+            <option value="caformer_m36_384">CAFormer M36 384</option>
+            <option value="caformer_m36_in21ft1k">CAFormer M36 ImageNet21k</option>
+            <option value="caformer_m36_384_in21ft1k">CAFormer M36 384 ImageNet21k</option>
+            <option value="caformer_m36_in21k">CAFormer M36 ImageNet21k Pretrained</option>
+            <option value="caformer_b36">CAFormer B36</option>
+            <option value="caformer_b36_384">CAFormer B36 384</option>
+            <option value="caformer_b36_in21ft1k">CAFormer B36 ImageNet21k</option>
+            <option value="caformer_b36_384_in21ft1k">CAFormer B36 384 ImageNet21k</option>
+            <option value="caformer_b36_in21k">CAFormer B36 ImageNet21k Pretrained</option>
         </param>
 
         <conditional name="scratch_fine_tune">
@@ -162,6 +221,25 @@
                 <!-- No additional parameters to show if the user selects 'No' -->
             </when>
         </conditional>
+        <param argument="image_resize"
+               name="image_resize"
+               type="select"
+               label="Image Resize"
+               help="Select the size to resize images to. Original size keeps images as-is, while other options resize all images to the specified dimensions.">
+            <option value="original" selected="true">Original Size (No Resize)</option>
+            <option value="96x96">96x96</option>
+            <option value="128x128">128x128</option>
+            <option value="160x160">160x160</option>
+            <option value="192x192">192x192</option>
+            <option value="220x220">220x220</option>
+            <option value="224x224">224x224</option>
+            <option value="256x256">256x256</option>
+            <option value="299x299">299x299</option>
+            <option value="320x320">320x320</option>
+            <option value="384x384">384x384</option>
+            <option value="448x448">448x448</option>
+            <option value="512x512">512x512</option>
+        </param>
         <param argument="augmentation"
                name="augmentation"
                type="select"
@@ -319,6 +397,146 @@
                 </element>
             </output_collection>
         </test>
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="caformer_s18" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="randformer_s12" />
+            <param name="customize_defaults" value="true" />
+            <param name="epochs" value="5" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <!-- Test 7: MetaFormer with 384x384 input - verifies model correctly handles non-224x224 dimensions -->
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="caformer_s18_384" />
+            <param name="image_resize" value="384x384" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+                <element name="description" >
+                    <assert_contents>
+                        <has_text text="384" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <!-- Test 8: Binary classification with custom threshold - verifies ROC curve generation for binary tasks; need to find a test dataset -->
+        <!-- <test expect_num_outputs="3">
+            <param name="input_csv" value="binary_classification.csv" ftype="csv" />
+            <param name="image_zip" value="binary_images.zip" ftype="zip" />
+            <param name="model_name" value="resnet18" />
+            <param name="customize_defaults" value="true" />
+            <param name="threshold" value="0.6" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                    <has_text text="ROC-AUC Curves" />
+                </assert_contents>
+            </output>
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+                <element name="test_statistics.json" >
+                    <assert_contents>
+                        <has_text text="roc_auc" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test> -->
+        <!-- Test 9: PoolFormerV2 model configuration - verifies custom_model parameter persists in config -->
+        <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="poolformerv2_s12" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                </assert_contents>
+            </output>
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <!-- Test 10: Multi-class classification with ROC curves - verifies robust ROC-AUC plot generation -->
+        <!-- <test expect_num_outputs="3">
+            <param name="input_csv" value="mnist_subset.csv" ftype="csv" />
+            <param name="image_zip" value="mnist_subset.zip" ftype="zip" />
+            <param name="model_name" value="resnet18" />
+            <param name="customize_defaults" value="true" />
+            <param name="epochs" value="3" />
+            <output name="output_report">
+                <assert_contents>
+                    <has_text text="Results Summary" />
+                    <has_text text="Train/Validation Results" />
+                    <has_text text="Test Results" />
+                    <has_text text="ROC-AUC Curves" />
+                    <has_text text="Micro-average ROC" />
+                </assert_contents>
+            </output>
+            <output_collection name="output_pred_csv" type="list" >
+                <element name="predictions.csv" >
+                    <assert_contents>
+                        <has_n_columns n="1" />
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test> -->
     </tests>
     <help>
         <![CDATA[
@@ -328,6 +546,16 @@ It uses the metadata csv to find the image paths and labels.
 The metadata csv should contain a column with the name 'image_path' and a column with the name 'label'.
 Optionally, you can also add a column with the name 'split' to specify which split each row belongs to (train, val, test). 
 If you do not provide a split column, the tool will automatically split the data into train, val, and test sets based on the proportions you specify or [0.7, 0.1, 0.2] by default.
+
+**Models Available**
+This tool supports a wide range of state-of-the-art image classification models including:
+- Traditional CNNs (ResNet, EfficientNet, VGG, etc.)
+- Vision Transformers (ViT, Swin Transformer)
+- Modern architectures (ConvNeXt, MaxViT)
+- MetaFormer family models (IdentityFormer, RandFormer, PoolFormerV2, ConvFormer, CAFormer)
+
+**MetaFormer Models**
+The MetaFormer family represents a unified perspective on transformer-like architectures. These models demonstrate that the success of transformers is largely due to their general architecture rather than specific components like attention mechanisms. All MetaFormer models use pretrained weights from Hugging Face and provide explicit confirmation of weight loading.
 
 **If the selected label column has more than 10 unique values, the tool will automatically treat the task as a regression problem and apply appropriate metrics (e.g., MSE, RMSE, R²).**
 

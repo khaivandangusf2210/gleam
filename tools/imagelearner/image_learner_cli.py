@@ -124,6 +124,7 @@ def format_config_table_html(
                     val_str = int(val)
                 else:
                     val = "auto"
+                    val_str = "auto"
             resolved_val = None
             if val is None or val == "auto":
                 if training_progress:
@@ -1674,7 +1675,7 @@ class ImageLearnerCLI:
         if self.temp_dir and self.temp_dir.exists():
             logger.info(f"Cleaning up temp directory: {self.temp_dir}")
             # Don't clean up for debugging
-            # shutil.rmtree(self.temp_dir, ignore_errors=True)
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
         self.temp_dir = None
         self.image_extract_dir = None
 
@@ -1763,18 +1764,6 @@ class ImageLearnerCLI:
                     logger.error(f"Failed to build fallback outputs: {fb_err}")
                     raise
 
-            # Experiment already run above, no need to run again
-            logger.info("Workflow completed successfully.")
-            self.backend.generate_plots(self.args.output_dir)
-            report_file = self.backend.generate_html_report(
-                "Image Classification Results",
-                self.args.output_dir,
-                backend_args,
-                split_info,
-            )
-            logger.info(f"HTML report generated at: {report_file}")
-            self.backend.convert_parquet_to_csv(self.args.output_dir)
-            logger.info("Converted Parquet to CSV.")
         except Exception:
             logger.error("Workflow execution failed", exc_info=True)
             raise

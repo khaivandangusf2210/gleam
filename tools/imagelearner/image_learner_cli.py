@@ -1022,6 +1022,7 @@ class LudwigDirectBackend:
                 dataset=str(dataset_path),
                 config=str(config_path),
                 output_directory=str(output_dir),
+                random_seed=random_seed,
                 skip_preprocessing=True,
             )
             logger.info(
@@ -1097,17 +1098,30 @@ class LudwigDirectBackend:
 
     def generate_plots(self, output_dir: Path) -> None:
         """Generate all registered Ludwig visualizations for the latest experiment run."""
-        logger.info("Generating visualizations…")
+        logger.info("Generating all Ludwig visualizations…")
 
-        # Comprehensive set of test visualizations
         test_plots = {
             "compare_performance",
-            "compare_classifiers_multiclass_multimetric",  # Generates Best, Sorted, Top, Worst variants
+            "compare_classifiers_performance_from_prob",
+            "compare_classifiers_performance_from_pred",
+            "compare_classifiers_performance_changing_k",
+            "compare_classifiers_multiclass_multimetric",
+            "compare_classifiers_predictions",
+            "confidence_thresholding_2thresholds_2d",
+            "confidence_thresholding_2thresholds_3d",
+            "confidence_thresholding",
+            "confidence_thresholding_data_vs_acc",
+            "binary_threshold_vs_metric",
+            "roc_curves",
+            "roc_curves_from_test_statistics",
+            "calibration_1_vs_all",
+            "calibration_multiclass",
             "confusion_matrix",
             "frequency_vs_f1",
         }
         train_plots = {
             "learning_curves",
+            "compare_classifiers_performance_subset",
         }
 
         output_dir = Path(output_dir)
@@ -1155,27 +1169,7 @@ class LudwigDirectBackend:
                 stats = json.load(f)
             output_feature = next(iter(stats.keys()), "")
 
-        # Dynamically detect number of classes from test statistics
-        num_classes = 10  # Default fallback
-        if test_stats:
-            try:
-                with open(test_stats, "r") as f:
-                    stats = json.load(f)
-                label_stats = stats.get(output_feature, {})
-                per_class_stats = label_stats.get("per_class_stats", {})
-                num_classes = len(per_class_stats)
-                logger.info(f"Detected {num_classes} classes from dataset")
-            except Exception as e:
-                logger.warning(f"Could not detect number of classes: {e}, using default {num_classes}")
-
-        # Limit to top 5 for cleaner visualizations
-        top_classes = min(num_classes, 5)
-        logger.info(f"Using top {top_classes} classes for comparative visualizations")
-
         viz_registry = get_visualizations_registry()
-        generated_count = 0
-        skipped_count = 0
-
         for viz_name, viz_func in viz_registry.items():
             if viz_name in train_plots:
                 viz_dir_plot = train_viz
@@ -1191,7 +1185,7 @@ class LudwigDirectBackend:
                     probabilities=[probs_path] if probs_path else [],
                     output_feature_name=output_feature,
                     ground_truth_split=2,
-                    top_n_classes=[top_classes],  # Dynamically set based on number of classes
+                    top_n_classes=[0],
                     top_k=3,
                     ground_truth_metadata=gt_metadata,
                     ground_truth=dataset_path,
@@ -1201,13 +1195,11 @@ class LudwigDirectBackend:
                     file_format="png",
                 )
                 logger.info(f"✔ Generated {viz_name}")
-                generated_count += 1
             except Exception as e:
-                logger.debug(f"✘ Skipped {viz_name}: {str(e)[:100]}")
-                skipped_count += 1
+                logger.warning(f"✘ Skipped {viz_name}: {e}")
 
-        logger.info(f"Visualization generation complete: {generated_count} generated, {skipped_count} skipped")
-        logger.info(f"Visualizations written to {viz_dir}")
+        logger.info(f"All visualizations written to {viz_dir}")
+
 
     def generate_html_report(
         self,

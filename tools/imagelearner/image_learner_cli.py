@@ -338,6 +338,8 @@ def extract_metrics_from_json(
         for k, v in test_label_stats.items():
             if k in exclude:
                 continue
+            if k == "overall_stats":
+                continue
             if isinstance(v, (int, float, str, bool)):
                 test_metrics[k] = v
 
@@ -624,7 +626,7 @@ def create_stratified_random_split(
         train_val_idx,
         test_size=val_size_adjusted,
         random_state=random_state,
-        stratify=out.loc[train_val_idx, label_column] if label_column else None,
+        stratify=out.loc[train_val_idx, label_column] if label_column and label_column in out.columns else None,
     )
 
     # assign split values
@@ -954,12 +956,20 @@ class LudwigDirectBackend:
                     "loss": {"type": "mean_squared_error"},
                 }
             else:
-                output_feat = {
-                    "name": LABEL_COLUMN_NAME,
-                    "type": "category" if num_unique_labels > 2 else "binary",
-                    "decoder": {"type": "classifier", "input_size": num_unique_labels},
-                    "loss": {"type": "softmax_cross_entropy"},
-                }
+                if num_unique_labels == 2:
+                    output_feat = {
+                        "name": LABEL_COLUMN_NAME,
+                        "type": "binary",
+                        "decoder": {"type": "classifier", "input_size": 1},
+                        "loss": {"type": "softmax_cross_entropy"},
+                    }
+                else:
+                    output_feat = {
+                        "name": LABEL_COLUMN_NAME,
+                        "type": "category",
+                        "decoder": {"type": "classifier", "input_size": num_unique_labels},
+                        "loss": {"type": "softmax_cross_entropy"},
+                    }
             if output_type == "binary" and config_params.get("threshold") is not None:
                 output_feat["threshold"] = float(config_params["threshold"])
             val_metric = None
@@ -1200,7 +1210,6 @@ class LudwigDirectBackend:
 
         logger.info(f"All visualizations written to {viz_dir}")
 
-
     def generate_html_report(
         self,
         title: str,
@@ -1341,7 +1350,7 @@ class LudwigDirectBackend:
 
             # Exclude ROC curves and standard confusion matrices (keep only entropy version)
             default_exclude = {
-                "roc_curves.png",  # Remove ROC curves from test tab
+                # "roc_curves.png",  # Remove ROC curves from test tab
                 "confusion_matrix__label_top5.png",  # Remove standard confusion matrix
                 "confusion_matrix__label_top10.png",  # Remove duplicate
                 "confusion_matrix__label_top6.png",   # Remove duplicate
@@ -1392,7 +1401,7 @@ class LudwigDirectBackend:
         # --- Predictions vs Ground Truth table (REGRESSION ONLY) ---
         preds_section = ""
         parquet_path = exp_dir / PREDICTIONS_PARQUET_FILE_NAME
-        if parquet_path.exists():
+        if output_type == "regression" and parquet_path.exists():
             try:
                 # 1) load predictions from Parquet
                 df_preds = pd.read_parquet(parquet_path).reset_index(drop=True)
@@ -1429,49 +1438,22 @@ class LudwigDirectBackend:
             except Exception as e:
                 logger.warning(f"Could not build Predictions vs GT table: {e}")
 
-        # Test tab = Metrics + Preds table + Interactive Plotly plots + Visualizations
+        tab3_content = test_metrics_html + preds_section
 
-        # Add interactive Plotly plots for classification tasks
-        plotly_section = ""
         if output_type in ("binary", "category") and test_stats_path.exists():
             try:
                 interactive_plots = build_classification_plots(
                     str(test_stats_path),
-                    str(train_stats_path) if train_stats_path.exists() else None
+                    str(train_stats_path) if train_stats_path.exists() else None,
                 )
-
                 for plot in interactive_plots:
-                    plotly_section += (
+                    tab3_content += (
                         f"<h2 style='text-align: center;'>{plot['title']}</h2>"
-                        + plot["html"]
+                        f"<div class='plotly-center'>{plot['html']}</div>"
                     )
-
                 logger.info(f"Generated {len(interactive_plots)} interactive Plotly plots")
             except Exception as e:
                 logger.warning(f"Could not generate Plotly plots: {e}")
-
-        tab3_content = (
-            test_metrics_html
-            + preds_section
-            + plotly_section
-        )
-
-        # assemble the tabs and help modal
-
-        tab3_content = test_metrics_html + preds_section
-
-        # Classification-only interactive Plotly panels (centered)
-        if output_type in ("binary", "category"):
-            training_stats_path = exp_dir / "training_statistics.json"
-            interactive_plots = build_classification_plots(
-                str(test_stats_path),
-                str(training_stats_path),
-            )
-            for plot in interactive_plots:
-                tab3_content += (
-                    f"<h2 style='text-align: center;'>{plot['title']}</h2>"
-                    f"<div class='plotly-center'>{plot['html']}</div>"
-                )
 
         # Add static TEST PNGs (with default dedupe/exclusions)
         tab3_content += render_img_section(

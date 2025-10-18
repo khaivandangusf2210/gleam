@@ -8,6 +8,10 @@ import torch.nn as nn
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 SUPPORTED_PREFIXES = (

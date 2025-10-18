@@ -4,12 +4,14 @@ ConvFormer and CAFormer.
 Standalone implementation for Galaxy Image Learner tool (no timm dependency).
 """
 from functools import partial
+import logging
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import trunc_normal_  # use torch's built-in truncated normal
 
+logger = logging.getLogger(__name__)
 
 def to_2tuple(v):
     if isinstance(v, (list, tuple)):
@@ -747,7 +749,8 @@ def poolformerv2_s24(pretrained=False, **kwargs):
     model.default_cfg = default_cfgs['poolformerv2_s24']
     if pretrained:
         try:
-            print(f"Loading pretrained weights for poolformerv2_s24 from: {model.default_cfg['url']}")
+            logger.info("Loading pretrained weights for poolformerv2_s24 from: %s", model.default_cfg['url'])
+
             # Add timeout to prevent hanging in CI environments
             import socket
             original_timeout = socket.getdefaulttimeout()
@@ -759,8 +762,8 @@ def poolformerv2_s24(pretrained=False, **kwargs):
             finally:
                 socket.setdefaulttimeout(original_timeout)
         except Exception as e:
-            print(f"⚠ Warning: Failed to load pretrained weights for poolformerv2_s24: {e}")
-            print("Continuing with randomly initialized weights...")
+            logger.warning("Failed to load pretrained weights for poolformerv2_s24: %s", e)
+            logger.info("Continuing with randomly initialized weights...")
     return model
 
 

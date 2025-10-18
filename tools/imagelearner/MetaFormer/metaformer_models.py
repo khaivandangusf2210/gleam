@@ -3,8 +3,8 @@ MetaFormer baselines including IdentityFormer, RandFormer, PoolFormerV2,
 ConvFormer and CAFormer.
 Standalone implementation for Galaxy Image Learner tool (no timm dependency).
 """
-from functools import partial
 import logging
+from functools import partial
 
 import torch
 import torch.nn as nn

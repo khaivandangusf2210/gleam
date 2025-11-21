@@ -76,7 +76,7 @@
             <param name="skip_errors" value="false" />
             <output name="output_zip">
                 <assert_contents>
-                    <has_size value="0" comparator="gt"/>
+                    <has_size value="1000" delta="1000"/>
                 </assert_contents>
             </output>
         </test>

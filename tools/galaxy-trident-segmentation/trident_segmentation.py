@@ -10,12 +10,12 @@ import argparse
 import logging
 import os
 import platform
-import sys
 import shutil
+import sys
 import tempfile
-from pathlib import Path
 import zipfile
-import subprocess
+from pathlib import Path
+
 import torch
 
 # Configure logging
@@ -48,7 +48,7 @@ def process_wsi_collection(
 ):
     """
     Process a collection of WSI files for tissue segmentation.
-    
+
     Parameters
     ----------
     input_collection : list
@@ -69,12 +69,11 @@ def process_wsi_collection(
     # Import TRIDENT modules
     from trident import Processor
     from trident.segmentation_models.load import segmentation_model_factory
-    import platform
-    
+
     # Create temporary directory for WSI files
     with tempfile.TemporaryDirectory(prefix="trident_wsi_", dir=os.getcwd()) as temp_wsi_dir:
         wsi_dir = Path(temp_wsi_dir)
-        
+
         # Copy WSI files to temporary directory
         logger.info(f"Copying {len(input_collection)} WSI files to temporary directory")
         for wsi_path in input_collection:
@@ -82,7 +81,7 @@ def process_wsi_collection(
             dest_path = wsi_dir / wsi_file.name
             shutil.copy2(wsi_file, dest_path)
             logger.info(f"Copied {wsi_file.name}")
-        
+
         # Determine device (automatically detect GPU)
         if torch.cuda.is_available():
             device = f'cuda:{gpu}'
@@ -96,7 +95,7 @@ def process_wsi_collection(
             use_multiprocessing = platform.system() != 'Darwin'
             if not use_multiprocessing:
                 logger.info("macOS detected: Disabling multiprocessing for compatibility")
-        
+
         # Initialize processor
         processor = Processor(
             job_dir=job_dir,
@@ -104,11 +103,11 @@ def process_wsi_collection(
             skip_errors=skip_errors,
             max_workers=0 if not use_multiprocessing else None,  # Disable on macOS, auto-detect on Linux
         )
-        
+
         # Load segmentation model
         logger.info(f"Loading segmentation model: {segmenter}")
         segmentation_model = segmentation_model_factory(segmenter)
-        
+
         # Load artifact remover if requested
         artifact_remover_model = None
         if remove_artifacts or remove_penmarks:
@@ -116,7 +115,7 @@ def process_wsi_collection(
                 'grandqc_artifact',
                 remove_penmarks_only=remove_penmarks and not remove_artifacts
             )
-        
+
         # Run segmentation
         logger.info("Running segmentation job...")
         try:
@@ -125,17 +124,17 @@ def process_wsi_collection(
             if platform.system() == 'Darwin':
                 # Patch WSI.segment_tissue to force num_workers=0 on macOS
                 from trident.wsi_objects import WSI
-                
+
                 if not hasattr(WSI.WSI, '_original_segment_tissue'):
                     WSI.WSI._original_segment_tissue = WSI.WSI.segment_tissue
-                    
+
                     def patched_segment_tissue(self, *args, num_workers=None, **kwargs):
                         # Force num_workers=0 on macOS to avoid pickling errors
                         logger.info("macOS detected: Using num_workers=0 (single-threaded)")
                         return self._original_segment_tissue(*args, num_workers=0, **kwargs)
-                    
+
                     WSI.WSI.segment_tissue = patched_segment_tissue
-            
+
             # Adjust batch size based on device
             if device.startswith('cuda'):
                 batch_size = 32  # Larger batch for GPU
@@ -143,7 +142,7 @@ def process_wsi_collection(
             else:
                 batch_size = 16  # Smaller batch for CPU
                 logger.info(f"CPU mode: Using batch_size={batch_size}")
-            
+
             processor.run_segmentation_job(
                 segmentation_model=segmentation_model,
                 seg_mag=segmentation_model.target_mag,
@@ -163,7 +162,7 @@ def process_wsi_collection(
 def collect_outputs(job_dir, output_zip):
     """
     Collect segmentation outputs into a ZIP file.
-    
+
     Parameters
     ----------
     job_dir : str
@@ -172,16 +171,16 @@ def collect_outputs(job_dir, output_zip):
         Path to output ZIP file
     """
     job_path = Path(job_dir)
-    
+
     # Collect outputs
     outputs_to_collect = {
         "contours_geojson": "*.geojson",
         "contours": "*.jpg",
         "thumbnails": "*.jpg",
     }
-    
+
     logger.info(f"Collecting outputs from {job_dir}")
-    
+
     with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
         for subdir, pattern in outputs_to_collect.items():
             subdir_path = job_path / subdir
@@ -190,13 +189,13 @@ def collect_outputs(job_dir, output_zip):
                     arcname = f"{subdir}/{file_path.name}"
                     zipf.write(file_path, arcname)
                     logger.info(f"Added {arcname} to output ZIP")
-        
+
         # Also collect any other output files (logs, configs)
         for file_path in job_path.glob("_*"):
             if file_path.is_file():
                 zipf.write(file_path, file_path.name)
                 logger.info(f"Added {file_path.name} to output ZIP")
-    
+
     logger.info(f"Output ZIP created: {output_zip}")
 
 
@@ -255,17 +254,17 @@ def parse_arguments():
 def main():
     """Main function."""
     args = parse_arguments()
-    
+
     if len(args.input) != len(args.original_name):
         raise ValueError("Mismatch between input paths and original names")
-    
+
     # Set up environment
     setup_trident_environment()
-    
+
     # Create output directory
     output_dir = os.path.join(os.getcwd(), "trident_output")
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # Process WSI collection
     process_wsi_collection(
         input_collection=args.input,
@@ -276,10 +275,10 @@ def main():
         gpu=args.gpu,
         skip_errors=args.skip_errors,
     )
-    
+
     # Collect outputs
     collect_outputs(output_dir, args.output_zip)
-    
+
     logger.info("Segmentation pipeline completed successfully")
 
 

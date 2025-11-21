@@ -1,19 +1,19 @@
+owner: goeckslab
 categories:
   - Machine Learning
-owner: goeckslab
 remote_repository_url: https://github.com/goeckslab/gleam.git
 homepage_url: https://github.com/goeckslab/gleam/tree/main/tools/galaxy-trident-segmentation
-
+long_description: |
+  TRIDENT tissue segmentation tool for whole-slide images (WSIs).
+  Supports HEST and GrandQC segmentation models with automatic GPU detection and CPU fallback.
 auto_tool_repositories:
   name_template: "{{ tool_id }}"
-  description_template: "TRIDENT tissue segmentation tool for whole-slide images"
-
+  description_template: "Wrapper for TRIDENT segmentation tool: {{ tool_name }}"
 suite:
   name: suite_trident_segmentation
-  description: A Galaxy tool for tissue segmentation using TRIDENT models.
+  description: TRIDENT tissue segmentation tool for whole-slide images.
   long_description: |
-    This tool performs tissue segmentation on whole-slide images (WSIs) using TRIDENT's 
-    segmentation models (HEST or GrandQC). It automatically detects tissue regions vs. 
-    background and supports artifact removal and penmark detection. The tool includes 
+    This tool performs tissue segmentation on whole-slide images (WSIs) using TRIDENT's
+    segmentation models (HEST or GrandQC). It automatically detects tissue regions vs.
+    background and supports artifact removal and penmark detection. The tool includes
     automatic GPU detection and CPU fallback for flexible deployment.
-

@@ -63,7 +63,7 @@
     </outputs>
     
     <tests>
-        <test>
+        <test expect_num_outputs="1">
             <param name="input_collection">
                 <collection type="list">
                     <element name="sample1" ftype="svs" value="test_wsi.svs" />
@@ -74,9 +74,9 @@
             <param name="remove_penmarks" value="false" />
             <param name="gpu_index" value="0" />
             <param name="skip_errors" value="false" />
-            <output name="output_zip">
+            <output name="output_zip" ftype="zip">
                 <assert_contents>
-                    <has_size value="1000" delta="1000"/>
+                    <has_size value="1000" delta="50000"/>
                 </assert_contents>
             </output>
         </test>

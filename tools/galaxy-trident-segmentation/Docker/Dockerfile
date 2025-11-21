@@ -61,5 +61,18 @@ ENV TORCH_HOME="/trident/hf_cache"
 # Create cache directory
 RUN mkdir -p /trident/hf_cache
 
+# Pre-download HEST segmentation model for faster tool execution
+# This avoids download timeouts during Galaxy tool runs
+RUN python3 -c "from huggingface_hub import snapshot_download; \
+    import os; \
+    os.environ['HF_HOME'] = '/trident/hf_cache'; \
+    snapshot_download( \
+        repo_id='MahmoodLab/hest-tissue-seg', \
+        repo_type='model', \
+        local_dir='/trident/hf_cache', \
+        cache_dir='/trident/hf_cache', \
+        allow_patterns=['deeplabv3_seg_v4.ckpt', 'Tissue_Detection_MPP10.pth', 'GrandQC_MPP1_state_dict.pth'] \
+    )"
+
 # Set default command
 CMD ["/bin/bash"]

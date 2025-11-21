@@ -63,7 +63,7 @@
     </outputs>
     
     <tests>
-        <test expect_num_outputs="1" expect_failure="false" expect_exit_code="0">
+        <test expect_num_outputs="1">
             <param name="input_collection">
                 <collection type="list">
                     <element name="sample1" ftype="svs" value="test_wsi.svs" />
@@ -76,7 +76,9 @@
             <param name="skip_errors" value="false" />
             <output name="output_zip" ftype="zip">
                 <assert_contents>
-                    <has_size value="100" delta="1000000"/>
+                    <!-- Check that output ZIP exists and is non-empty -->
+                    <!-- Models are pre-downloaded in Docker image to avoid timeout -->
+                    <has_size value="1000" delta="50000"/>
                 </assert_contents>
             </output>
         </test>

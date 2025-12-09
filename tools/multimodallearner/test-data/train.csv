@@ -1,0 +1,177 @@
+feature_0,feature_1,feature_2,feature_3,feature_4,text,target,image_path
+0.4967141530112327,-1.415370742,0.3577873603482833,-0.828995011,-1.594427659,Glottiskarzinom[C32.0 L],1,image_0.png
+-0.138264301,-0.420645323,0.5607845263682344,-0.56018104,-0.599375023,Bösartige Neubildung: Zungenrand[C02.1 ],1,image_1.png
+0.6476885381006925,-0.342714517,1.083051243175277,0.7472936051232618,0.0052437,Karzinom Oropharynx mehrere Teilbereiche überlappend[C10.8 ],1,image_2.png
+1.5230298564080254,-0.802277269,1.053802052034903,0.6103702654334648,0.046980593764742055,Neubildung unsicheren oder unbekannten Verhaltens: Sonstige näher bezeichnete Lokalisationen[D48.7 ] Rachenmandelkarzinom[C11.1 R] Leukoplakie Stimmlippe[J38.3 L],0,image_3.png
+-0.234153375,-0.161285712,-1.377669368,-0.020901594,-0.450065471,Bösartige Neubildung der Supraglottis[C32.1 R],1,image_4.png
+-0.234136957,0.4040508568145384,-0.93782504,0.117327383,0.6228499323474987,Uvulakarzinom[C05.2 ],0,image_5.png
+1.5792128155073915,1.8861859012105302,0.5150352672086598,1.277664895788425,-1.067620429,"Bösartige Neubildung: Zunge, mehrere Teilbereiche überlappend[C02.8 ] Bösartige Neubildung im Bereich der Zungengruben[C10.0 ]",0,image_6.png
+0.7674347291529088,0.17457781283183896,0.5137859509122088,-0.591571389,-0.142379485,Karzinom Oropharynx mehrere Teilbereiche überlappend[C10.8 ],1,image_7.png
+-0.469474386,0.25755039072276437,0.5150476863060479,0.5470973811700379,0.12029563171189886,Neubildung bösartig Hypopharynx sonstige[C13.8 L],0,image_8.png
+0.5425600435859647,-0.074445916,3.852731490654721,-0.202192652,0.514438834,Bösartige Neubildung: Glottis[C32.0 ],0,image_9.png
+-0.463417693,-1.918771215,0.570890511,-0.217681203,0.7116148780888898,Unsichere Neubildung der Übergangsregion des Oropharynx[D37.0 ],0,image_10.png
+-0.465729754,-0.026513875,1.135565640180599,1.098776852,-1.124642092,Karzinom Tonsille mehrere Teilbereiche überlappend[C09.8 R],0,image_11.png
+0.24196227156603412,0.06023021,0.9540017634932023,0.8254163489880298,-1.534114171,Bösartige Neubildung: Glottis[C32.0 ],1,image_12.png
+-1.913280245,2.463242112485286,0.651391251,0.8135096360006385,1.277676821898509,"Bösartige Neubildung: Hypopharynx, mehrere Teilbereiche überlappend[C13.8 ]",0,image_13.png
+-1.724917833,-0.192360965,-0.315269245,1.305478807154329,0.33231401197959165,"Bösartige Neubildung: Hypopharynx, mehrere Teilbereiche überlappend[C13.8 ]",1,image_14.png
+-0.562287529,0.30154734233361247,0.7589692204932674,0.021003842,-0.748486537,Halslymphknotenmetastasen[C77.0 B],1,image_15.png
+-1.01283112,-0.03471177,-0.772825215,0.6819529712949639,1.551151975522523,Bösartige Neubildung: Glottis[C32.0 ] Bösartige Neubildung der Glottis[C32.0 B],0,image_16.png
+0.3142473325952739,-1.168678038,-0.236818607,-0.310266757,0.11567463429285867,Karzinom des Zungenrandes und der Zungenspitze[C02.1 ],1,image_17.png
+-0.908024076,1.1428228145150205,-0.485363548,0.3241663524884421,1.1792971840638264,CUP [Cancer of Unknown Primary][C80.0 ] Halsmetastasen[C77.0 ],1,image_18.png
+-1.412303701,0.7519330326867741,0.081874139,-0.130143054,0.067518481,Zungenrandkarzinom[C02.1 ],1,image_19.png
+1.465648768921554,0.7910319470430469,2.3146585666735087,0.096995965,2.060747924881987,Bösartige Neubildung: Zungenrand[C02.1 ] Neubildung bösartig Mundboden sonstige[C04.8 R] Halslymphknotenmetastasen[C77.0 B],0,image_20.png
+-0.2257763,-0.909387455,-1.867265193,0.5951570254369136,1.7553408424432044,Tonsillenkarzinom[C09.9 ] Halslymphknotenmetastasen[C77.0 ],1,image_21.png
+0.067528205,1.4027943109360992,0.6862601903745135,-0.818220683,-0.248964148,Bösartige Neubildung: Glottis[C32.0 ],1,image_22.png
+-1.424748186,-1.401851063,-1.612715871,2.0923872756854602,0.9715709509543554,Glottiskarzinom[C32.0 L],1,image_23.png
+-0.544382725,0.5868570938002703,-0.471931866,-1.006017381,0.6453759495851475,Karzinom Tonsille mehrere Teilbereiche überlappend[C09.8 L],0,image_24.png
+0.11092258970986608,2.1904556258099785,1.088950596967366,-1.214188613,1.3686315575323487,Bösartige Neubildung: Glottis[C32.0 ] Neubildung bösartig Kehlkopf sonstige[C32.8 L],1,image_25.png
+-1.150993577,-0.990536325,0.064280019,1.1581108735000678,-0.964923461,"Bösartige Neubildung: Oropharynx, nicht näher bezeichnet[C10.9 ]",0,image_26.png
+0.37569801834567196,-0.56629773,-1.077744778,0.7916626939629359,0.6860514599984393,"Bösartige Neubildung: Hypopharynx, nicht näher bezeichnet[C13.9 ]",0,image_27.png
+-0.60063869,0.099651365,-0.715303709,0.6241198170521551,1.0584244868495878,Bösartige Neubildung des inneren Larynx[C32.0 L],0,image_28.png
+-0.29169375,-0.503475654,0.6795977489346758,0.6283455092642799,-1.758739486,Bösartige Neubildung des postkrikoidalen Hypopharynx[C13.0 ] Neubildung bösartig Hypopharynx sonstige[C13.8 ],0,image_29.png
+-0.601706612,-1.550663431,-0.730366632,-0.012246773,-1.183258513,Karzinom bei unbekanntem Primärtumor (CUP)[C80.0 ],0,image_30.png
+1.8522781845089378,0.068562975,0.21645858958197486,-0.897254371,-2.039232178,Bösartige Neubildung: Seitenwand des Oropharynx[C10.2 ],0,image_31.png
+-0.013497225,-1.062303714,0.045571839903813784,0.075804558,-0.269406834,Nachblutung[T81.0 B],1,image_32.png
+-1.057710929,0.4735924306351816,-0.651600348,-0.677161712,0.7175422557959623,Unsichere Neubildung des seitlichen Zungenrandes[D37.0 R],0,image_33.png
+0.822544912,-0.919424234,2.1439440893253257,0.9751197334177512,1.502357052096028,Bösartige Neubildung des Mundrachenraums[C14.8 ],1,image_34.png
+-1.22084365,1.5499344050175394,0.6339190223180112,-0.147057382,0.07409478,Karzinom Oropharynx Seitenwand[C10.2 R] Neubildung bösartig sekundär und onA Lymphknoten Kopf Gesicht Hals[C77.0 R],1,image_35.png
+0.2088635950047554,-0.783253292,-2.025142587,-0.825497197,1.6286155455712918,Zungenrandkarzinom[C02.1 ],0,image_36.png
+-1.959670124,-0.322061516,0.18645431476942764,-0.321385842,-1.380101458,Bösartige Neubildung Larynx mehrere Teilbereiche überlappend[C32.8 B],1,image_37.png
+-1.328186049,0.8135172173696698,-0.661786465,0.41293145427562433,-1.703382439,Bösartige Neubildung des weichen Gaumens[C05.1 R],1,image_38.png
+0.19686123586912352,-1.230864316,0.852433335,-0.563724553,-0.055547699,,1,image_39.png
+0.7384665799954104,0.22745993460412942,-0.792520738,-0.822220396,0.3840654489393073,Stimmlippenkarzinom[C32.0 L] Struma nodosa euthyreot[E04.1 ],1,image_40.png
+0.1713682811899705,1.307142754282428,-0.114736441,0.2436872114919123,-0.032694748,Glottiskarzinom[C32.0 L],0,image_41.png
+-0.115648282,-1.607483235,0.5049872789804571,0.24496657110872277,-2.0674421,Bösartige Neubildung: Glottis[C32.0 ],1,image_42.png
+-0.301103696,0.1846338585323042,0.8657551941701215,-0.506943175,-0.08912004,Neubildung unsicheren oder unbekannten Verhaltens: Larynx[D38.0 ] Neubildung bösartig Kehlkopf sonstige[C32.8 L],0,image_43.png
+-1.47852199,0.25988279424842353,-1.200296407,-0.471038306,-1.304469501,"Bösartige Neubildung: Larynx, mehrere Teilbereiche überlappend[C32.8 ]",1,image_44.png
+-0.719844208,0.7818228717773104,-0.334501236,0.2320499373576363,0.6696725488300385,Bösartige Neubildung der Glottis[C32.0 ],1,image_45.png
+-0.460638771,-1.236950711,-0.474945311,-1.448084341,0.36659824609684827,Bösartige Neubildung des Zungenrandes[C02.1 ],0,image_46.png
+1.0571222262189157,-1.320456613,-0.653329233,-1.407463774,-0.939879786,"Neubildung unsicheren oder unbekannten Verhaltens: Lippe, Mundhöhle und Pharynx[D37.0 ] Funktionsstörung des Tracheostomas[J95.0 ]",1,image_47.png
+0.3436182895684614,0.5219415656168976,1.7654542402810969,-0.718444221,-0.513866917,Stimmlippenkarzinom[C32.0 R],1,image_48.png
+-1.763040155,0.29698467323318606,0.40498171096095553,-0.213447152,-1.059213522,Karzinom des Mundrachenraums[C14.8 R],1,image_49.png
+0.324083969,0.25049285034587654,-1.260883954,0.3109075655980046,-0.062679097,"Bösartige Neubildung: Larynx, mehrere Teilbereiche überlappend[C32.8 ]",0,image_50.png
+-0.38508228,0.3464482094969757,0.9178619470547761,1.475356216949552,0.9551423205012383,,1,image_51.png
+-0.676922,-0.680024722,2.1221561970126332,0.8576596232020194,-0.985726046,Karzinom Mundboden mehrere Teilbereiche überlappend[C04.8 L],0,image_52.png
+0.6116762888408679,0.23225369716100355,1.0324652605511468,-0.15993853,0.5040465155178444,Bösartige Neubildung: Glottis[C32.0 ],1,image_53.png
+1.030999522495951,0.29307247329868125,-1.519369966,-0.019016208,-0.530257618,Bösartige Neubildung der Supraglottis[C32.1 B],0,image_54.png
+0.9312801191161986,-0.714351418,-0.484234073,-1.002529365,-0.792872832,Bösartige Neubildung Hypopharynx mehrere Teilbereiche überlappend[C13.8 L],0,image_55.png
+-0.839217523,1.8657745111447566,1.2669111491866227,-0.018513136,-0.10703036,Bösartige Neubildung Larynx mehrere Teilbereiche überlappend[C32.8 ],1,image_56.png
+-0.309212376,0.4738329209117875,-0.707669466,-0.288658639,-1.035242322,"Bösartige Neubildung der Gaumenbogentonsillen[C09.1 L] Lymphknotenvergrößerung, umschrieben[R59.0 ]",1,image_57.png
+0.33126343140356396,-1.191303497,0.44381942814622843,0.3227185603380895,-0.553649305,Bösartige Neubildung des Zungenrandes und der Zungenspitze[C02.1 ],0,image_58.png
+0.9755451271223592,0.6565536086338297,0.7746340534293368,-0.827230944,-1.197877893,Karzinom der Plica aryepiglottica[C13.1 L],0,image_59.png
+-0.479174238,-0.97468167,-0.926930472,0.5193465142411723,1.9647251329163893,Bösartige Neubildung: Glottis[C32.0 ],1,image_60.png
+-0.185658977,0.787084604,-0.059525356,1.5327389130025777,0.035263552,"Bösartige Neubildung: Tonsille, mehrere Teilbereiche überlappend[C09.8 ]",0,image_61.png
+-1.106334974,1.158595579007404,-3.24126734,-0.108760148,-0.699725508,Karzinom Tonsille mehrere Teilbereiche überlappend[C09.8 R],1,image_62.png
+-1.196206624,-0.820682318,-1.024387641,0.40171172209894146,0.213979911,Bösartige Neubildung: Glottis[C32.0 ] Glottiskarzinom[C32.0 R],1,image_63.png
+0.812525822,0.9633761292443218,-0.252568151,0.6901439917111125,-0.11232805,Glottiskarzinom[C32.0 L] Bösartige Neubildung der Glottis[C32.0 L],1,image_64.png
+1.356240028570823,0.4127809269364983,-1.247783182,-0.401220472,-0.2209696,,1,image_65.png
+-0.072010122,0.82206016,1.6324113039316352,0.22409248181041677,0.6141667000434252,Bösartige Neubildung der Zungenunterfläche[C02.2 R],0,image_66.png
+1.0035328978920242,1.8967929826539474,-1.430141378,0.012592401,0.7575077100473051,Bösartige Neubildung Hypopharynx mehrere Teilbereiche überlappend[C13.8 L] Neubildung bösartig sekundär und onA Lymphknoten Kopf Gesicht Hals[C77.0 B],1,image_67.png
+0.36163602504763415,-0.245388116,-0.440044487,0.097676099,-0.530501148,Rachenmandelkarzinom[C11.1 ],0,image_68.png
+-0.645119755,-0.753736164,0.13074057728609134,-0.773009784,-0.575818241,"Bösartige Neubildung: Hypopharynx, mehrere Teilbereiche überlappend[C13.8 ] Halslymphknotenmetastasen[C77.0 B]",1,image_69.png
+0.36139560550841393,-0.88951443,1.4412732890661155,0.024510174258942714,-0.275051697,"Bösartige Neubildung: Oropharynx, nicht näher bezeichnet[C10.9 ]",0,image_70.png
+1.5380365664659692,-0.815810285,-1.435862151,0.49799829124544975,-2.301921165,Bösartige Neubildung: Supraglottis[C32.1 ],1,image_71.png
+-0.035826039,-0.077101709,1.1631637521549596,1.4511436077950417,-1.515191062,Karzinom Hypopharynx mehrere Teilbereiche überlappend[C13.8 L],0,image_72.png
+1.5646436558140062,0.3411519748166439,0.010233061019587049,0.9592708260852069,1.3668742674445247,Bösartige Neubildung Oropharynx mehrere Teilbereiche überlappend[C10.8 ],0,image_73.png
+-2.619745104,0.27669079933001905,-0.981508651,2.1531824575115563,1.6449677135012837,Carcinoma in situ der Epiglottis[D02.0 ],1,image_74.png
+0.8219025043752238,0.8271832490360238,0.46210347426327075,-0.767347563,-0.24903604,Bösartige Neubildung der Gaumenbogentonsillen[C09.1 R],1,image_75.png
+0.087047068,0.013001892,0.19905969557347003,0.8723206367206782,0.5765569630557664,"Bösartige Neubildung: Oropharynx, mehrere Teilbereiche überlappend[C10.8 ]",1,image_76.png
+-0.29900735,1.4535340771573169,-0.600216877,0.18334200573835174,0.3112501545435361,Uvulakarzinom[C05.2 ],1,image_77.png
+0.091760777,-0.264656833,0.069802085,2.1898029332176723,3.0788808084552377,"Bösartige Neubildung: Oropharynx, mehrere Teilbereiche überlappend[C10.8 ]",0,image_78.png
+-1.987568915,2.720169166589619,-0.385313597,-0.808298285,1.1195749114345768,Bösartige Neubildung: Glottis[C32.0 ],1,image_79.png
+-0.219671888,0.6256673477650062,0.11351734525124804,-0.839721842,-0.127917591,Bösartige Neubildung der Glottis[C32.0 ],0,image_80.png
+0.3571125715117464,-0.857157556,0.6621306745210467,-0.599392645,-0.955540441,Stimmbandkarzinom[C32.0 L],0,image_81.png
+1.477894044741516,-1.070892498,1.586016816145352,-2.123895724,-1.60644632,,1,image_82.png
+-0.518270218,0.4824724152431853,-1.237815499,-0.525755022,0.2034636358672231,Zungenrandkarzinom[C02.1 ],0,image_83.png
+-0.808493603,-0.223462785,2.1330333746562666,-0.759132662,-0.756350745,Bösartige Neubildung: Zungenrand[C02.1 ] Bösartige Neubildung: Zungenrand[C02.1 ],0,image_84.png
+-0.501757044,0.714000494,-1.9520878,0.15039378647620763,-1.42225371,"Neubildung unsicheren oder unbekannten Verhaltens: Lippe, Mundhöhle und Pharynx[D37.0 ]",0,image_85.png
+0.9154021177020741,0.47323762457354485,-0.151785095,0.34175597577715944,-0.646572884,Karzinom Tonsille mehrere Teilbereiche überlappend[C09.8 R],0,image_86.png
+0.32875110965968446,-0.072828913,0.5883172064845765,1.8761708392158862,-1.081548004,Karzinom Tonsille mehrere Teilbereiche überlappend[C09.8 R] Halslymphknotenmetastasen[C77.0 B],1,image_87.png
+-0.529760204,-0.846793718,0.28099186773503265,0.9504238381860503,1.6871416350725648,,1,image_88.png
+0.5132674331133561,-1.514847225,-0.62269952,-0.576903656,0.8816397569494505,Karzinom Oropharynx mehrere Teilbereiche überlappend[C10.8 ] Karzinom Oropharynx mehrere Teilbereiche überlappend[C10.8 ],1,image_89.png
+0.097077549,-0.446514952,-0.20812225,-0.898414671,-0.007972641,,1,image_90.png
+0.9686449905328892,0.8563987943234723,-0.493000935,0.4919191715065057,1.4799441388900259,Bösartige Neubildung: Glottis[C32.0 ],0,image_91.png
+-0.702053094,0.21409374413020396,-0.589364757,-1.320233207,0.077368308,,0,image_92.png
+-0.327662147,-1.245738779,0.8496020970210246,1.8314587658543537,-0.861284201,Bösartige Neubildung des Zungenrandes[C02.1 R],1,image_93.png
+-0.392108153,0.173180926,0.35701548596504734,1.179440120721287,1.5231240772696573,Supraglottisches Karzinom[C32.1 R],1,image_94.png
+-1.463514948,0.3853173797288368,-0.692909595,-0.469175652,0.5389100436846587,Karzinom Hypopharynx mehrere Teilbereiche überlappend[C13.8 ] Karzinom Hypopharynx mehrere Teilbereiche überlappend[C13.8 ],1,image_95.png
+0.29612027706457605,-0.883857436,0.8995998754332507,-1.713134529,-1.037246154,,0,image_96.png
+0.26105527217988933,0.1537251059455279,0.30729952087660933,1.3538723741654128,-0.190338678,Bösartige Neubildung Larynx mehrere Teilbereiche überlappend[C32.8 B],1,image_97.png
+0.005113457,0.058208718445999896,0.8128621188389601,-0.114539845,-0.875618253,"Bösartige Neubildung: Oropharynx, mehrere Teilbereiche überlappend[C10.8 ]",1,image_98.png
+-0.234587133,-1.142970298,0.6296288419236122,1.2378163119734618,-1.382799731,"Bösartige Neubildung: Oropharynx, mehrere Teilbereiche überlappend[C10.8 ] Karzinom Tonsille mehrere Teilbereiche überlappend[C09.8 L]",1,image_99.png
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,Glottiskarzinom[C32.0 L],,
+,,,,,"Bösartige Neubildung: Oropharynx, mehrere Teilbereiche überlappend[C10.8 ]",,
+,,,,,Bösartige Neubildung Larynx mehrere Teilbereiche überlappend[C32.8 L],,
+,,,,,Larynxkarzinom[C32.9 ],,
+,,,,,"Bösartige Neubildung: Oropharynx, mehrere Teilbereiche überlappend[C10.8 ]",,
+,,,,,Bösartige Neubildung: Zungenrand[C02.1 ] Zungenrandkarzinom[C02.1 ],,
+,,,,,Bösartige Neubildung: Glottis[C32.0 ],,
+,,,,,"Bösartige Neubildung: Tonsille, mehrere Teilbereiche überlappend[C09.8 ]",,
+,,,,,,,
+,,,,,Bösartige Neubildung Larynx mehrere Teilbereiche überlappend[C32.8 B],,
+,,,,,Bösartige Neubildung der Supraglottis[C32.1 ],,
+,,,,,Karzinom Tonsille mehrere Teilbereiche überlappend[C09.8 R],,
+,,,,,Bösartige Neubildung Larynx mehrere Teilbereiche überlappend[C32.8 ],,
+,,,,,Bösartige Neubildung der Glottis[C32.0 L],,
+,,,,,"Bösartige Neubildung: Zunge, nicht näher bezeichnet[C02.9 ]",,
+,,,,,"Bösartige Neubildung: Zunge, mehrere Teilbereiche überlappend[C02.8 ]",,
+,,,,,"Bösartige Neubildung: Tonsille, mehrere Teilbereiche überlappend[C09.8 ] Bösartige Neubildung: Oropharynx, mehrere Teilbereiche überlappend[C10.8 ]",,
+,,,,,Bösartige Neubildung der Fossa tonsillaris[C09.0 R],,
+,,,,,"Neubildung unsicheren oder unbekannten Verhaltens: Lippe, Mundhöhle und Pharynx[D37.0 ] Bösartige Neubildung der Zungenunterfläche[C02.2 ]",,
+,,,,,Neubildung bösartig Hypopharynx sonstige[C13.8 ],,
+,,,,,Karzinom der ventralen Zunge[C02.2 ],,
+,,,,,Bösartige Neubildung des weichen Gaumens[C05.1 L],,
+,,,,,Karzinom Oropharynx mehrere Teilbereiche überlappend[C10.8 R],,
+,,,,,Halsmetastase[C79.88 R],,
+,,,,,Karzinom Oropharynx mehrere Teilbereiche überlappend[C10.8 ],,
+,,,,,"Bösartige Neubildung: Hypopharynx, nicht näher bezeichnet[C13.9 ]",,
+,,,,,Bösartige Neubildung: Zungenrand[C02.1 ],,
+,,,,,Glottiskarzinom[C32.0 R],,
+,,,,,Supraglottisches Karzinom[C32.1 B] Halslymphknotenmetastasen[C77.0 B],,
+,,,,,CUP [Cancer of Unknown Primary][C80.0 L],,
+,,,,,Bösartige Neubildung: Zungenrand[C02.1 ],,
+,,,,,"Bösartige Neubildung: Hypopharynx, mehrere Teilbereiche überlappend[C13.8 ]",,
+,,,,,Uvulakarzinom[C05.2 ],,
+,,,,,Karzinom Uvula[C05.2 ],,
+,,,,,Karzinom Hypopharynx mehrere Teilbereiche überlappend[C13.8 R],,
+,,,,,"Bösartige Neubildung: Oropharynx, mehrere Teilbereiche überlappend[C10.8 ]",,
+,,,,,cT3 OrpharynxCa links[H93.1 ] Bösartige Neubildung Oropharynx mehrere Teilbereiche überlappend[C10.8 L],,
+,,,,,Bösartige Neubildung: Uvula[C05.2 ],,
+,,,,,"Bösartige Neubildung: Tonsille, mehrere Teilbereiche überlappend[C09.8 ]",,
+,,,,,"Bösartige Neubildung: Larynx, mehrere Teilbereiche überlappend[C32.8 ]",,
+,,,,,Bösartige Neubildung: Vallecula epiglottica[C10.0 ],,
+,,,,,Bösartige Neubildung: Zungenrand[C02.1 ] Bösartige Neubildung Zunge mehrere Teilbereiche überlappend[C02.8 L],,
+,,,,,Bösartige Neubildung Larynx mehrere Teilbereiche überlappend[C32.8 ],,

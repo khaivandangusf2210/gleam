@@ -145,26 +145,11 @@ def main():
     parser.add_argument(
         "--validation-metric",
         type=str,
-        default="roc_auc",
-        choices=[
-            "accuracy",
-            "loss",
-            "roc_auc",
-            "balanced_accuracy",
-            "precision",
-            "recall",
-            "f1",
-            "specificity",
-            "log_loss",
-            "pearson_r",
-            "mae",
-            "mse",
-            "rmse",
-            "mape",
-            "r2",
-            "explained_variance",
-        ],
-        help="Metric Ludwig uses to select the best model during training/validation.",
+        default=None,
+        help=(
+            "Metric Ludwig uses to select the best model during training/validation. "
+            "Leave unset to let the tool pick a default for the inferred task."
+        ),
     )
     parser.add_argument(
         "--target-column",

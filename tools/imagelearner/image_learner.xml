@@ -1,4 +1,4 @@
-<tool id="image_learner" name="Image Learner" version="0.1.4.1" profile="22.01">
+<tool id="image_learner" name="Image Learner" version="0.1.5" profile="22.01">
     <description>trains and evaluates an image classification/regression model</description>
     <requirements>
         <container type="docker">quay.io/goeckslab/galaxy-ludwig-gpu:0.10.1</container>
@@ -389,6 +389,8 @@
             <discover_datasets pattern="(?P&lt;designation&gt;.+)\.json" format="json" directory="experiment_run" />
             <discover_datasets pattern="(?P&lt;designation&gt;.+)\.png" format="png" directory="experiment_run/visualizations/train" />
             <discover_datasets pattern="(?P&lt;designation&gt;.+)\.png" format="png" directory="experiment_run/visualizations/test" />
+            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.png" format="png" directory="experiment_run/feature_importance_examples" />
+            <discover_datasets pattern="(?P&lt;designation&gt;feature_importance_examples\.zip)" format="zip" directory="experiment_run" />
         </collection>
     </outputs>
     <tests>

@@ -13,34 +13,34 @@ logger = logging.getLogger("ImageLearner")
 def extract_patient_id(filename: str) -> str:
     """
     Extract patient/subject ID from filename to group related images.
-    
+
     This function removes common suffixes like '_orig', '_flip', '_augmented', etc.
     to identify images from the same patient/subject.
-    
+
     Examples:
         'ISIC_0025132_orig.jpg' -> 'ISIC_0025132'
         'ISIC_0025132_flip.jpg' -> 'ISIC_0025132'
         'patient_001_augmented.png' -> 'patient_001'
         'image_123.jpg' -> 'image_123'
-    
+
     Args:
         filename: The filename or path to extract patient ID from
-    
+
     Returns:
         The extracted patient ID (base filename without augmentation suffixes)
     """
     # Get just the filename without directory path
     import os
     base_name = os.path.basename(filename)
-    
+
     # Remove file extension
     name_without_ext = os.path.splitext(base_name)[0]
-    
+
     # Remove common augmentation suffixes
     # Pattern matches: _orig, _flip, _augmented, _rotated, _cropped, etc.
     pattern = r'_(orig|flip|flipped|augmented|rotated|cropped|scaled|transformed)$'
     patient_id = re.sub(pattern, '', name_without_ext, flags=re.IGNORECASE)
-    
+
     return patient_id
 
 
@@ -51,15 +51,15 @@ def add_patient_id_column(
 ) -> pd.DataFrame:
     """
     Add a patient ID column to the dataframe by extracting IDs from image filenames.
-    
+
     This ensures that images from the same patient (e.g., original and augmented versions)
     are grouped together to prevent data leakage during train/validation/test splits.
-    
+
     Args:
         df: Input dataframe containing image paths
         image_column: Name of the column containing image paths
         patient_id_column: Name of the new column to create for patient IDs
-    
+
     Returns:
         DataFrame with added patient_id column
     """
@@ -69,20 +69,20 @@ def add_patient_id_column(
             f"Cannot extract patient IDs."
         )
         return df
-    
+
     out = df.copy()
     out[patient_id_column] = out[image_column].apply(extract_patient_id)
-    
+
     # Log statistics about grouping
     unique_images = len(out)
     unique_patients = out[patient_id_column].nunique()
     avg_images_per_patient = unique_images / unique_patients if unique_patients > 0 else 0
-    
+
     logger.info(
         f"Extracted patient IDs: {unique_patients} unique patients from {unique_images} images "
         f"(avg {avg_images_per_patient:.2f} images per patient)"
     )
-    
+
     return out
 
 
@@ -164,7 +164,7 @@ def create_stratified_random_split(
 ) -> pd.DataFrame:
     """
     Create a stratified random split when no split column exists.
-    
+
     Args:
         df: Input dataframe
         split_column: Name of column to create for split assignments (0=train, 1=val, 2=test)
@@ -175,7 +175,7 @@ def create_stratified_random_split(
         image_column: Column containing image paths (used for auto patient ID extraction)
         auto_detect_patient_id: If True and image_column is provided, automatically extract
                                 patient IDs to prevent data leakage from augmented images
-    
+
     Returns:
         DataFrame with added split column
     """
@@ -493,7 +493,7 @@ def create_stratified_random_split(
     logger.info(
         f"Split counts: Train={len(train_idx)}, Val={len(val_idx)}, Test={len(test_idx)}"
     )
-    
+
     return _cleanup_and_return(out)
 
 

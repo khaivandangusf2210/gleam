@@ -1,6 +1,5 @@
 import argparse
 import logging
-import re
 from typing import Optional
 
 import numpy as np
@@ -8,82 +7,6 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 logger = logging.getLogger("ImageLearner")
-
-
-def extract_patient_id(filename: str) -> str:
-    """
-    Extract patient/subject ID from filename to group related images.
-
-    This function removes common suffixes like '_orig', '_flip', '_augmented', etc.
-    to identify images from the same patient/subject.
-
-    Examples:
-        'ISIC_0025132_orig.jpg' -> 'ISIC_0025132'
-        'ISIC_0025132_flip.jpg' -> 'ISIC_0025132'
-        'patient_001_augmented.png' -> 'patient_001'
-        'image_123.jpg' -> 'image_123'
-
-    Args:
-        filename: The filename or path to extract patient ID from
-
-    Returns:
-        The extracted patient ID (base filename without augmentation suffixes)
-    """
-    # Get just the filename without directory path
-    import os
-    base_name = os.path.basename(filename)
-
-    # Remove file extension
-    name_without_ext = os.path.splitext(base_name)[0]
-
-    # Remove common augmentation suffixes
-    # Pattern matches: _orig, _flip, _augmented, _rotated, _cropped, etc.
-    pattern = r'_(orig|flip|flipped|augmented|rotated|cropped|scaled|transformed)$'
-    patient_id = re.sub(pattern, '', name_without_ext, flags=re.IGNORECASE)
-
-    return patient_id
-
-
-def add_patient_id_column(
-    df: pd.DataFrame,
-    image_column: str = "image_path",
-    patient_id_column: str = "patient_id",
-) -> pd.DataFrame:
-    """
-    Add a patient ID column to the dataframe by extracting IDs from image filenames.
-
-    This ensures that images from the same patient (e.g., original and augmented versions)
-    are grouped together to prevent data leakage during train/validation/test splits.
-
-    Args:
-        df: Input dataframe containing image paths
-        image_column: Name of the column containing image paths
-        patient_id_column: Name of the new column to create for patient IDs
-
-    Returns:
-        DataFrame with added patient_id column
-    """
-    if image_column not in df.columns:
-        logger.warning(
-            f"Image column '{image_column}' not found in dataframe. "
-            f"Cannot extract patient IDs."
-        )
-        return df
-
-    out = df.copy()
-    out[patient_id_column] = out[image_column].apply(extract_patient_id)
-
-    # Log statistics about grouping
-    unique_images = len(out)
-    unique_patients = out[patient_id_column].nunique()
-    avg_images_per_patient = unique_images / unique_patients if unique_patients > 0 else 0
-
-    logger.info(
-        f"Extracted patient IDs: {unique_patients} unique patients from {unique_images} images "
-        f"(avg {avg_images_per_patient:.2f} images per patient)"
-    )
-
-    return out
 
 
 def split_data_0_2(
@@ -159,8 +82,6 @@ def create_stratified_random_split(
     random_state: int = 42,
     label_column: Optional[str] = None,
     group_column: Optional[str] = None,
-    image_column: Optional[str] = None,
-    auto_detect_patient_id: bool = True,
 ) -> pd.DataFrame:
     """
     Create a stratified random split when no split column exists.
@@ -172,9 +93,6 @@ def create_stratified_random_split(
         random_state: Random seed for reproducibility
         label_column: Column containing labels for stratification
         group_column: Column containing group IDs to keep together in splits
-        image_column: Column containing image paths (used for auto patient ID extraction)
-        auto_detect_patient_id: If True and image_column is provided, automatically extract
-                                patient IDs to prevent data leakage from augmented images
 
     Returns:
         DataFrame with added split column
@@ -183,31 +101,6 @@ def create_stratified_random_split(
 
     # initialize split column
     out[split_column] = 0
-
-    # Track if we created a temporary patient_id column
-    temp_patient_id_col = "__temp_patient_id__"
-    created_temp_col = False
-
-    # Auto-detect patient IDs from image paths if requested
-    if auto_detect_patient_id and image_column and image_column in out.columns:
-        if not group_column:
-            # Create temporary patient_id column for grouping
-            out = add_patient_id_column(out, image_column, temp_patient_id_col)
-            group_column = temp_patient_id_col
-            created_temp_col = True
-            logger.info(
-                f"Auto-detected patient IDs from '{image_column}' column to prevent data leakage"
-            )
-        else:
-            logger.info(
-                f"Group column '{group_column}' already specified; skipping auto patient ID detection"
-            )
-
-    def _cleanup_and_return(dataframe: pd.DataFrame) -> pd.DataFrame:
-        """Helper to clean up temp column before returning."""
-        if created_temp_col and temp_patient_id_col in dataframe.columns:
-            dataframe = dataframe.drop(columns=[temp_patient_id_col])
-        return dataframe.astype({split_column: int})
 
     if group_column and group_column not in out.columns:
         logger.warning(
@@ -296,7 +189,7 @@ def create_stratified_random_split(
             out.loc[train_idx, split_column] = 0
             out.loc[val_idx, split_column] = 1
             out.loc[test_idx, split_column] = 2
-            return _cleanup_and_return(out)
+            return out.astype({split_column: int})
 
         rng.shuffle(indices)
 
@@ -307,7 +200,7 @@ def create_stratified_random_split(
         out.loc[indices[n_train:n_train + n_val], split_column] = 1
         out.loc[indices[n_train + n_val:n_train + n_val + n_test], split_column] = 2
 
-        return _cleanup_and_return(out)
+        return out.astype({split_column: int})
 
     # check if stratification is possible
     label_counts = out[label_column].value_counts()
@@ -361,7 +254,7 @@ def create_stratified_random_split(
             out.loc[train_idx, split_column] = 0
             out.loc[val_idx, split_column] = 1
             out.loc[test_idx, split_column] = 2
-            return _cleanup_and_return(out)
+            return out.astype({split_column: int})
 
         rng.shuffle(indices)
 
@@ -372,7 +265,7 @@ def create_stratified_random_split(
         out.loc[indices[n_train:n_train + n_val], split_column] = 1
         out.loc[indices[n_train + n_val:n_train + n_val + n_test], split_column] = 2
 
-        return _cleanup_and_return(out)
+        return out.astype({split_column: int})
 
     if group_column:
         logger.info(
@@ -466,7 +359,7 @@ def create_stratified_random_split(
         logger.info(
             f"Split counts: Train={len(train_idx)}, Val={len(val_idx)}, Test={len(test_idx)}"
         )
-        return _cleanup_and_return(out)
+        return out.astype({split_column: int})
 
     logger.info("Using stratified random split for train/validation/test sets (per-class allocation)")
 
@@ -494,7 +387,7 @@ def create_stratified_random_split(
         f"Split counts: Train={len(train_idx)}, Val={len(val_idx)}, Test={len(test_idx)}"
     )
 
-    return _cleanup_and_return(out)
+    return out.astype({split_column: int})
 
 
 class SplitProbAction(argparse.Action):

@@ -86,22 +86,49 @@ def create_stratified_random_split(
     """
     Create a stratified random split when no split column exists.
 
+    When group_column is provided, all samples with the same group ID are kept
+    together in the same split (train/val/test). This prevents data leakage when
+    the same subject has multiple images (e.g., original and augmented versions,
+    or multiple slides from the same patient). The split ensures that if a group
+    ID appears in the training set, it will not appear in validation or test sets.
+
+    The function performs stratified splitting by label when label_column is provided,
+    maintaining the same label distribution across train/val/test splits. When both
+    group_column and label_column are provided, it first groups by label, then assigns
+    entire groups to splits while maintaining stratification.
+
     Args:
         df: Input dataframe
         split_column: Name of column to create for split assignments (0=train, 1=val, 2=test)
         split_probabilities: List of [train_prob, val_prob, test_prob] that sum to 1.0
         random_state: Random seed for reproducibility
         label_column: Column containing labels for stratification
-        group_column: Column containing group IDs to keep together in splits
+        group_column: Column containing group IDs to keep together in splits.
+                     All rows with the same group ID will be assigned to the same split
+                     to prevent data leakage. Examples: patient_id, slide_id, subject_id.
 
     Returns:
         DataFrame with added split column
+
+    Example:
+        >>> df = pd.DataFrame({
+        ...     'image_path': ['img1_orig.jpg', 'img1_flip.jpg', 'img2_orig.jpg'],
+        ...     'label': [0, 0, 1],
+        ...     'patient_id': ['P001', 'P001', 'P002']
+        ... })
+        >>> result = create_stratified_random_split(
+        ...     df, 'split', group_column='patient_id', label_column='label'
+        ... )
+        >>> # Both img1_orig.jpg and img1_flip.jpg will be in the same split
     """
     out = df.copy()
 
     # initialize split column
     out[split_column] = 0
 
+    # Validate group_column if provided
+    # When group_column is specified, all samples with the same group ID will be
+    # kept together in the same split to prevent data leakage
     if group_column and group_column not in out.columns:
         logger.warning(
             "Group column '%s' not found in data; proceeding without group-aware split.",
@@ -155,6 +182,8 @@ def create_stratified_random_split(
         rng = np.random.RandomState(random_state)
 
         if group_column:
+            # GROUP-AWARE SPLIT: Prevent data leakage by keeping all samples with
+            # the same group ID together in the same split
             group_series = out[group_column].astype(object)
             missing_mask = group_series.isna()
             if missing_mask.any():
@@ -162,6 +191,8 @@ def create_stratified_random_split(
                 group_series.loc[missing_mask] = [
                     f"__missing__{idx}" for idx in group_series.index[missing_mask]
                 ]
+            # Build mapping: group_id -> list of row indices
+            # All rows with the same group_id will be assigned to the same split
             group_to_indices = {}
             for idx, group_id in group_series.items():
                 group_to_indices.setdefault(group_id, []).append(idx)
@@ -175,10 +206,13 @@ def create_stratified_random_split(
             val_idx = []
             test_idx = []
 
+            # Assign entire groups to splits (not individual rows)
+            # This ensures all samples from the same group stay together
             for group_id in group_ids:
                 size = len(group_to_indices[group_id])
                 split_idx = _choose_split(counts, targets, active)
                 counts[split_idx] += size
+                # Assign all rows in this group to the same split
                 if split_idx == 0:
                     train_idx.extend(group_to_indices[group_id])
                 elif split_idx == 1:
@@ -220,6 +254,8 @@ def create_stratified_random_split(
         rng = np.random.RandomState(random_state)
 
         if group_column:
+            # GROUP-AWARE SPLIT: Prevent data leakage by keeping all samples with
+            # the same group ID together in the same split
             group_series = out[group_column].astype(object)
             missing_mask = group_series.isna()
             if missing_mask.any():
@@ -227,6 +263,8 @@ def create_stratified_random_split(
                 group_series.loc[missing_mask] = [
                     f"__missing__{idx}" for idx in group_series.index[missing_mask]
                 ]
+            # Build mapping: group_id -> list of row indices
+            # All rows with the same group_id will be assigned to the same split
             group_to_indices = {}
             for idx, group_id in group_series.items():
                 group_to_indices.setdefault(group_id, []).append(idx)
@@ -240,10 +278,13 @@ def create_stratified_random_split(
             val_idx = []
             test_idx = []
 
+            # Assign entire groups to splits (not individual rows)
+            # This ensures all samples from the same group stay together
             for group_id in group_ids:
                 size = len(group_to_indices[group_id])
                 split_idx = _choose_split(counts, targets, active)
                 counts[split_idx] += size
+                # Assign all rows in this group to the same split
                 if split_idx == 0:
                     train_idx.extend(group_to_indices[group_id])
                 elif split_idx == 1:
@@ -268,12 +309,17 @@ def create_stratified_random_split(
         return out.astype({split_column: int})
 
     if group_column:
+        # STRATIFIED GROUP-AWARE SPLIT: Combine label stratification with group-based splitting
+        # This ensures: (1) label distribution is balanced across splits, AND
+        # (2) all samples with the same group ID stay together (prevents data leakage)
         logger.info(
             "Using stratified random split for train/validation/test sets (grouped by '%s')",
             group_column,
         )
         rng = np.random.RandomState(random_state)
 
+        # Build mapping: group_id -> list of row indices
+        # All rows with the same group_id will be assigned to the same split
         group_series = out[group_column].astype(object)
         missing_mask = group_series.isna()
         if missing_mask.any():
@@ -287,6 +333,8 @@ def create_stratified_random_split(
             group_to_indices.setdefault(group_id, []).append(idx)
 
         group_ids = sorted(group_to_indices.keys(), key=lambda x: str(x))
+        # Determine the label for each group (for stratification)
+        # If a group has mixed labels, use the most common label
         group_labels = {}
         mixed_groups = []
         label_series = out[label_column]
@@ -313,6 +361,9 @@ def create_stratified_random_split(
         test_idx = []
         active = [i for i, p in enumerate(split_probabilities) if p > 0]
 
+        # Stratify by label: process each label class separately
+        # Within each label class, assign entire groups to splits
+        # This maintains both stratification AND prevents data leakage
         for label_value in sorted(label_counts.index.tolist(), key=lambda x: str(x)):
             label_groups = [g for g in group_ids if group_labels.get(g) == label_value]
             if not label_groups:
@@ -322,10 +373,12 @@ def create_stratified_random_split(
             targets = _allocate_split_counts(label_total, split_probabilities)
             counts = [0 for _ in split_probabilities]
 
+            # Assign entire groups (not individual rows) to maintain group integrity
             for group_id in label_groups:
                 size = len(group_to_indices[group_id])
                 split_idx = _choose_split(counts, targets, active)
                 counts[split_idx] += size
+                # Assign all rows in this group to the same split
                 if split_idx == 0:
                     train_idx.extend(group_to_indices[group_id])
                 elif split_idx == 1:

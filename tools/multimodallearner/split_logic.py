@@ -51,9 +51,18 @@ def split_dataset(
     if SPLIT_COL in train_dataset.columns:
         unique = set(train_dataset[SPLIT_COL].dropna().unique())
         valid = {"train", "val", "validation", "test"}
-        if unique.issubset(valid | {"validation"}):
+        if unique.issubset(valid):
             train_dataset[SPLIT_COL] = train_dataset[SPLIT_COL].replace("validation", "val")
-            logger.info(f"Using pre-existing 'split' column: {sorted(unique)}")
+            normalized = set(train_dataset[SPLIT_COL].dropna().unique())
+            missing = {"train", "test"} - normalized
+            if missing:
+                missing_list = ", ".join(sorted(missing))
+                raise ValueError(
+                    "Pre-existing 'split' column is missing required split(s): "
+                    f"{missing_list}. Expected at least train and test, "
+                    "or remove the 'split' column to let the tool create splits."
+                )
+            logger.info(f"Using pre-existing 'split' column: {sorted(normalized)}")
             return
 
     train_dataset[SPLIT_COL] = "train"
@@ -91,6 +100,17 @@ def split_dataset(
         return best
 
     if test_dataset is not None:
+        if sample_id_column and sample_id_column in test_dataset.columns:
+            train_ids = set(train_dataset[sample_id_column].dropna().astype(object).unique())
+            test_ids = set(test_dataset[sample_id_column].dropna().astype(object).unique())
+            overlap = train_ids & test_ids
+            if overlap:
+                logger.warning(
+                    "Sample ID column '%s' has %d overlapping IDs between train and external test sets; "
+                    "consider removing overlaps to avoid leakage.",
+                    sample_id_column,
+                    len(overlap),
+                )
         if sample_id_column:
             rng = np.random.RandomState(random_seed)
             group_series = train_dataset[sample_id_column].astype(object)
@@ -119,12 +139,24 @@ def split_dataset(
                     val_idx.extend(group_to_indices[group_id])
             train_dataset.loc[val_idx, SPLIT_COL] = "val"
         else:
-            stratify = y if _can_stratify(y) else None
-            train_idx, val_idx = train_test_split(
-                train_dataset.index, test_size=validation_size,
-                random_state=random_seed, stratify=stratify
-            )
-            train_dataset.loc[val_idx, SPLIT_COL] = "val"
+            if validation_size <= 0:
+                logger.warning(
+                    "validation_size is %.3f; skipping validation split to avoid train_test_split errors.",
+                    validation_size,
+                )
+            elif validation_size >= 1:
+                logger.warning(
+                    "validation_size is %.3f; assigning all rows to validation to avoid train_test_split errors.",
+                    validation_size,
+                )
+                train_dataset[SPLIT_COL] = "val"
+            else:
+                stratify = y if _can_stratify(y) else None
+                train_idx, val_idx = train_test_split(
+                    train_dataset.index, test_size=validation_size,
+                    random_state=random_seed, stratify=stratify
+                )
+                train_dataset.loc[val_idx, SPLIT_COL] = "val"
         logger.info(f"External test set → created val split ({validation_size:.0%})")
 
     else:
@@ -165,16 +197,44 @@ def split_dataset(
             train_dataset.loc[test_idx, SPLIT_COL] = "test"
         else:
             stratify = y if _can_stratify(y) else None
-            tv_idx, test_idx = train_test_split(
-                train_dataset.index, test_size=p_test,
-                random_state=random_seed, stratify=stratify
-            )
+            if p_test <= 0:
+                logger.warning(
+                    "split_probabilities specify 0 test size; skipping test split to avoid train_test_split errors."
+                )
+                tv_idx = train_dataset.index
+                test_idx = train_dataset.index[:0]
+            elif p_test >= 1:
+                logger.warning(
+                    "split_probabilities specify 100% test size; assigning all rows to test to avoid train_test_split errors."
+                )
+                tv_idx = train_dataset.index[:0]
+                test_idx = train_dataset.index
+            else:
+                tv_idx, test_idx = train_test_split(
+                    train_dataset.index, test_size=p_test,
+                    random_state=random_seed, stratify=stratify
+                )
             rel_val = p_val / (p_train + p_val) if (p_train + p_val) > 0 else 0
-            strat_tv = y.loc[tv_idx] if _can_stratify(y.loc[tv_idx]) else None
-            train_idx, val_idx = train_test_split(
-                tv_idx, test_size=rel_val,
-                random_state=random_seed, stratify=strat_tv
-            )
+            train_idx = train_dataset.index[:0]
+            val_idx = train_dataset.index[:0]
+            if len(tv_idx):
+                if rel_val <= 0:
+                    logger.warning(
+                        "split_probabilities specify 0 validation size; skipping validation split to avoid train_test_split errors."
+                    )
+                    train_idx = tv_idx
+                elif rel_val >= 1:
+                    logger.warning(
+                        "split_probabilities specify 100% validation size; assigning all remaining rows to validation "
+                        "to avoid train_test_split errors."
+                    )
+                    val_idx = tv_idx
+                else:
+                    strat_tv = y.loc[tv_idx] if _can_stratify(y.loc[tv_idx]) else None
+                    train_idx, val_idx = train_test_split(
+                        tv_idx, test_size=rel_val,
+                        random_state=random_seed, stratify=strat_tv
+                    )
 
             train_dataset.loc[val_idx, SPLIT_COL] = "val"
             train_dataset.loc[test_idx, SPLIT_COL] = "test"
